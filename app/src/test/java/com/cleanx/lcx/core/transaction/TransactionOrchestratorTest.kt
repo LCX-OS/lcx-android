@@ -1,12 +1,13 @@
 package com.cleanx.lcx.core.transaction
 
-import app.cash.turbine.turbineScope
 import com.cleanx.lcx.core.model.PaymentMethod
 import com.cleanx.lcx.core.model.PaymentStatus
 import com.cleanx.lcx.core.model.ServiceType
 import com.cleanx.lcx.core.model.Ticket
 import com.cleanx.lcx.core.model.TicketStatus
 import com.cleanx.lcx.core.network.TicketDraft
+import com.cleanx.lcx.core.transaction.data.SavedTransaction
+import com.cleanx.lcx.core.transaction.data.TransactionPersistence
 import com.cleanx.lcx.feature.payments.data.ChargeResult
 import com.cleanx.lcx.feature.payments.data.PaymentRepository
 import com.cleanx.lcx.feature.printing.data.PrintRepository
@@ -15,6 +16,7 @@ import com.cleanx.lcx.feature.tickets.data.ApiResult
 import com.cleanx.lcx.feature.tickets.data.TicketRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -27,6 +29,7 @@ class TransactionOrchestratorTest {
     private lateinit var ticketRepository: TicketRepository
     private lateinit var paymentRepository: PaymentRepository
     private lateinit var printRepository: PrintRepository
+    private lateinit var persistence: TransactionPersistence
     private lateinit var orchestrator: TransactionOrchestrator
 
     private val draft = TicketDraft(
@@ -62,7 +65,17 @@ class TransactionOrchestratorTest {
         ticketRepository = mockk()
         paymentRepository = mockk()
         printRepository = mockk()
-        orchestrator = TransactionOrchestrator(ticketRepository, paymentRepository, printRepository)
+        persistence = mockk(relaxed = true)
+
+        // Default: persistence.save returns a fixed ID
+        coEvery { persistence.save(any(), any(), any(), any()) } returns "persist-id-001"
+
+        // Default: printRepository.getSelectedPrinter returns null (no printer selected in tests)
+        every { printRepository.getSelectedPrinter() } returns null
+
+        orchestrator = TransactionOrchestrator(
+            ticketRepository, paymentRepository, printRepository, persistence,
+        )
     }
 
     // -- Happy path: create -> charge -> print -> complete --
@@ -395,5 +408,271 @@ class TransactionOrchestratorTest {
         orchestrator.reset()
 
         assertTrue(orchestrator.state.value is TransactionState.Idle)
+    }
+
+    // =========================================================================
+    // Persistence integration tests
+    // =========================================================================
+
+    @Test
+    fun `startTransaction persists each state transition`() = runTest {
+        coEvery {
+            ticketRepository.createTickets(any(), any())
+        } returns ApiResult.Success(listOf(createdTicket))
+
+        coEvery {
+            paymentRepository.charge(ticketId = "ticket-001", amount = 150.0)
+        } returns ChargeResult.Success(ticket = paidTicket, transactionId = "txn-001")
+
+        coEvery {
+            printRepository.printWithRetry(any(), any())
+        } returns PrintResult.Success
+
+        orchestrator.startTransaction(draft)
+
+        // Verify persistence.save was called for each state transition:
+        // CreatingTicket, TicketCreated, ChargingPayment, PaymentCharged,
+        // PrintingLabel, LabelPrinted, Completed
+        coVerify(atLeast = 7) { persistence.save(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `markCompleted is called on finalization`() = runTest {
+        coEvery {
+            ticketRepository.createTickets(any(), any())
+        } returns ApiResult.Success(listOf(createdTicket))
+
+        coEvery {
+            paymentRepository.charge(ticketId = "ticket-001", amount = 150.0)
+        } returns ChargeResult.Success(ticket = paidTicket, transactionId = "txn-001")
+
+        coEvery {
+            printRepository.printWithRetry(any(), any())
+        } returns PrintResult.Success
+
+        orchestrator.startTransaction(draft)
+
+        coVerify { persistence.markCompleted(any()) }
+    }
+
+    @Test
+    fun `cancelAndPersist calls markCancelled and resets`() = runTest {
+        coEvery {
+            ticketRepository.createTickets(any(), any())
+        } returns ApiResult.Error(httpStatus = 500, message = "Error")
+
+        orchestrator.startTransaction(draft)
+        assertTrue(orchestrator.state.value is TransactionState.TicketCreationFailed)
+
+        orchestrator.cancelAndPersist()
+
+        assertTrue(orchestrator.state.value is TransactionState.Idle)
+        coVerify { persistence.markCancelled(any()) }
+    }
+
+    // =========================================================================
+    // Resume tests
+    // =========================================================================
+
+    @Test
+    fun `resume from TICKET_CREATED skips ticket creation and goes to payment`() = runTest {
+        coEvery {
+            paymentRepository.charge(ticketId = "ticket-001", amount = 150.0)
+        } returns ChargeResult.Success(ticket = paidTicket, transactionId = "txn-001")
+
+        coEvery {
+            printRepository.printWithRetry(any(), any())
+        } returns PrintResult.Success
+
+        val saved = SavedTransaction(
+            id = "saved-001",
+            correlationId = "corr-001",
+            phase = TransactionPhase.TICKET_CREATED,
+            draft = draft,
+            ticket = createdTicket,
+            paymentTransactionId = null,
+            paymentAmount = null,
+            errorMessage = null,
+            errorCode = null,
+        )
+
+        orchestrator.resumeTransaction(saved)
+
+        val finalState = orchestrator.state.value
+        assertTrue("Expected Completed but was $finalState", finalState is TransactionState.Completed)
+
+        // Verify ticket creation was NOT called
+        coVerify(exactly = 0) { ticketRepository.createTickets(any(), any()) }
+        // But payment was called
+        coVerify(exactly = 1) { paymentRepository.charge(any(), any()) }
+    }
+
+    @Test
+    fun `resume from PAYMENT_SUCCEEDED_API_FAILED only retries API sync - never re-charges`() = runTest {
+        coEvery {
+            paymentRepository.syncPaymentToBackend(
+                ticketId = "ticket-001",
+                transactionId = "txn-critical",
+                amount = 150.0,
+            )
+        } returns ChargeResult.Success(ticket = paidTicket, transactionId = "txn-critical")
+
+        coEvery {
+            printRepository.printWithRetry(any(), any())
+        } returns PrintResult.Success
+
+        val saved = SavedTransaction(
+            id = "saved-002",
+            correlationId = "corr-002",
+            phase = TransactionPhase.PAYMENT_SUCCEEDED_API_FAILED,
+            draft = draft,
+            ticket = createdTicket,
+            paymentTransactionId = "txn-critical",
+            paymentAmount = 150.0,
+            errorMessage = "Service Unavailable",
+            errorCode = null,
+        )
+
+        orchestrator.resumeTransaction(saved)
+
+        val finalState = orchestrator.state.value
+        assertTrue("Expected Completed but was $finalState", finalState is TransactionState.Completed)
+
+        // CRITICAL: charge was never called -- only syncPaymentToBackend
+        coVerify(exactly = 0) { paymentRepository.charge(any(), any()) }
+        coVerify(exactly = 1) { paymentRepository.syncPaymentToBackend(any(), any(), any()) }
+    }
+
+    @Test
+    fun `resume from PAYMENT_CHARGED goes directly to printing`() = runTest {
+        coEvery {
+            printRepository.printWithRetry(any(), any())
+        } returns PrintResult.Success
+
+        val saved = SavedTransaction(
+            id = "saved-003",
+            correlationId = "corr-003",
+            phase = TransactionPhase.PAYMENT_CHARGED,
+            draft = draft,
+            ticket = paidTicket,
+            paymentTransactionId = "txn-001",
+            paymentAmount = 150.0,
+            errorMessage = null,
+            errorCode = null,
+        )
+
+        orchestrator.resumeTransaction(saved)
+
+        val finalState = orchestrator.state.value
+        assertTrue("Expected Completed but was $finalState", finalState is TransactionState.Completed)
+
+        // No ticket creation, no payment
+        coVerify(exactly = 0) { ticketRepository.createTickets(any(), any()) }
+        coVerify(exactly = 0) { paymentRepository.charge(any(), any()) }
+        coVerify(exactly = 1) { printRepository.printWithRetry(any(), any()) }
+    }
+
+    @Test
+    fun `resume from PRINT_FAILED retries printing`() = runTest {
+        coEvery {
+            printRepository.printWithRetry(any(), any())
+        } returns PrintResult.Success
+
+        val saved = SavedTransaction(
+            id = "saved-004",
+            correlationId = "corr-004",
+            phase = TransactionPhase.PRINT_FAILED,
+            draft = draft,
+            ticket = paidTicket,
+            paymentTransactionId = "txn-001",
+            paymentAmount = 150.0,
+            errorMessage = "Printer offline",
+            errorCode = null,
+        )
+
+        orchestrator.resumeTransaction(saved)
+
+        val finalState = orchestrator.state.value
+        assertTrue("Expected Completed but was $finalState", finalState is TransactionState.Completed)
+
+        coVerify(exactly = 0) { paymentRepository.charge(any(), any()) }
+    }
+
+    @Test
+    fun `resume from LABEL_PRINTED goes directly to finalize`() = runTest {
+        val saved = SavedTransaction(
+            id = "saved-005",
+            correlationId = "corr-005",
+            phase = TransactionPhase.LABEL_PRINTED,
+            draft = draft,
+            ticket = paidTicket,
+            paymentTransactionId = "txn-001",
+            paymentAmount = 150.0,
+            errorMessage = null,
+            errorCode = null,
+        )
+
+        orchestrator.resumeTransaction(saved)
+
+        val finalState = orchestrator.state.value
+        assertTrue("Expected Completed but was $finalState", finalState is TransactionState.Completed)
+
+        coVerify(exactly = 0) { ticketRepository.createTickets(any(), any()) }
+        coVerify(exactly = 0) { paymentRepository.charge(any(), any()) }
+        coVerify(exactly = 0) { printRepository.printWithRetry(any(), any()) }
+    }
+
+    @Test
+    fun `resume from CREATING_TICKET restarts ticket creation`() = runTest {
+        coEvery {
+            ticketRepository.createTickets(any(), any())
+        } returns ApiResult.Success(listOf(createdTicket))
+
+        coEvery {
+            paymentRepository.charge(ticketId = "ticket-001", amount = 150.0)
+        } returns ChargeResult.Success(ticket = paidTicket, transactionId = "txn-001")
+
+        coEvery {
+            printRepository.printWithRetry(any(), any())
+        } returns PrintResult.Success
+
+        val saved = SavedTransaction(
+            id = "saved-006",
+            correlationId = "corr-006",
+            phase = TransactionPhase.CREATING_TICKET,
+            draft = draft,
+            ticket = null,
+            paymentTransactionId = null,
+            paymentAmount = null,
+            errorMessage = null,
+            errorCode = null,
+        )
+
+        orchestrator.resumeTransaction(saved)
+
+        val finalState = orchestrator.state.value
+        assertTrue("Expected Completed but was $finalState", finalState is TransactionState.Completed)
+
+        coVerify(exactly = 1) { ticketRepository.createTickets(any(), any()) }
+    }
+
+    @Test
+    fun `resume from COMPLETED is a no-op - stays Idle`() = runTest {
+        val saved = SavedTransaction(
+            id = "saved-007",
+            correlationId = "corr-007",
+            phase = TransactionPhase.COMPLETED,
+            draft = draft,
+            ticket = paidTicket,
+            paymentTransactionId = "txn-001",
+            paymentAmount = 150.0,
+            errorMessage = null,
+            errorCode = null,
+        )
+
+        orchestrator.resumeTransaction(saved)
+
+        val finalState = orchestrator.state.value
+        assertTrue("Expected Idle but was $finalState", finalState is TransactionState.Idle)
     }
 }

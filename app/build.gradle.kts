@@ -34,6 +34,8 @@ android {
             buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:3000\"")
             buildConfigField("String", "SUPABASE_URL", "\"http://10.0.2.2:54321\"")
             buildConfigField("String", "SUPABASE_ANON_KEY", "\"dev-anon-key\"")
+            buildConfigField("Boolean", "USE_REAL_ZETTLE", "false")
+            buildConfigField("Boolean", "USE_REAL_BROTHER", "false")
         }
         create("staging") {
             dimension = "environment"
@@ -42,12 +44,16 @@ android {
             buildConfigField("String", "API_BASE_URL", "\"https://staging.lcx.example.com\"")
             buildConfigField("String", "SUPABASE_URL", "\"https://staging.supabase.co\"")
             buildConfigField("String", "SUPABASE_ANON_KEY", "\"staging-anon-key\"")
+            buildConfigField("Boolean", "USE_REAL_ZETTLE", "true")
+            buildConfigField("Boolean", "USE_REAL_BROTHER", "false")
         }
         create("prod") {
             dimension = "environment"
             buildConfigField("String", "API_BASE_URL", "\"https://lcx.example.com\"")
             buildConfigField("String", "SUPABASE_URL", "\"https://prod.supabase.co\"")
             buildConfigField("String", "SUPABASE_ANON_KEY", "\"prod-anon-key\"")
+            buildConfigField("Boolean", "USE_REAL_ZETTLE", "true")
+            buildConfigField("Boolean", "USE_REAL_BROTHER", "true")
         }
     }
 
@@ -79,6 +85,13 @@ android {
 }
 
 dependencies {
+    // Project modules
+    implementation(project(":core"))
+    implementation(project(":feature:auth"))
+    implementation(project(":feature:tickets"))
+    implementation(project(":feature:payments"))
+    implementation(project(":feature:printing"))
+
     // AndroidX Core
     implementation(libs.androidx.core.ktx)
 
@@ -98,22 +111,10 @@ dependencies {
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
 
-    // Network
-    implementation(libs.retrofit)
-    implementation(libs.retrofit.kotlinx.serialization)
-    implementation(libs.okhttp)
-    implementation(libs.okhttp.logging)
-
     // Room
     implementation(libs.room.runtime)
     ksp(libs.room.compiler)
     implementation(libs.room.ktx)
-
-    // DataStore
-    implementation(libs.datastore.preferences)
-
-    // WorkManager
-    implementation(libs.workmanager)
 
     // Serialization
     implementation(libs.kotlinx.serialization.json)
@@ -135,6 +136,12 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(libs.turbine)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.mockwebserver)
+    testImplementation(libs.retrofit)
+    testImplementation(libs.retrofit.kotlinx.serialization)
+    testImplementation(libs.okhttp)
+    testImplementation(libs.room.testing)
+    testImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }

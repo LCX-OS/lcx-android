@@ -1,11 +1,13 @@
 package com.cleanx.lcx.core.transaction.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -25,15 +27,25 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cleanx.lcx.core.transaction.TransactionState
+import com.cleanx.lcx.core.ui.LcxConfirmationDialog
 
 @Composable
 fun TransactionScreen(
@@ -42,154 +54,223 @@ fun TransactionScreen(
     viewModel: TransactionViewModel = hiltViewModel(),
 ) {
     val state = viewModel.uiState.collectAsStateWithLifecycle().value
+    val pendingState = viewModel.pendingTransaction.collectAsStateWithLifecycle().value
+
+    // Track confirmation dialog for back press during active transaction
+    var showCancelDialog by remember { mutableStateOf(false) }
+
+    // Determine if the transaction is actively in progress
+    val isActiveTransaction = state.isProcessing ||
+        state.transactionState is TransactionState.CreatingTicket ||
+        state.transactionState is TransactionState.TicketCreated ||
+        state.transactionState is TransactionState.ChargingPayment ||
+        state.transactionState is TransactionState.PaymentCharged ||
+        state.transactionState is TransactionState.PrintingLabel ||
+        state.transactionState is TransactionState.LabelPrinted
+
+    // Handle back navigation during active transaction
+    BackHandler(enabled = isActiveTransaction || state.isCritical) {
+        if (state.isCritical) {
+            // During critical state (payment succeeded but API failed), block back entirely
+            // User must retry or explicitly cancel
+        } else if (isActiveTransaction) {
+            showCancelDialog = true
+        }
+    }
+
+    // Confirmation dialog
+    if (showCancelDialog) {
+        LcxConfirmationDialog(
+            title = "Cancelar transaccion",
+            message = "¿Cancelar la transaccion en curso?",
+            confirmLabel = "Cancelar transaccion",
+            cancelLabel = "Continuar",
+            onConfirm = {
+                showCancelDialog = false
+                viewModel.cancel()
+                onCancelled()
+            },
+            onDismiss = { showCancelDialog = false },
+            isDanger = true,
+        )
+    }
+
+    // Recovery dialog for pending transactions found on startup
+    PendingTransactionDialog(
+        state = pendingState,
+        onResume = { viewModel.resumePendingTransaction() },
+        onCancel = {
+            viewModel.cancelPendingTransaction()
+            onCancelled()
+        },
+    )
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState()),
+            .padding(16.dp),
     ) {
         Text(
             text = "Proceso de ticket",
             style = MaterialTheme.typography.headlineSmall,
+            modifier = Modifier.semantics { heading() },
         )
 
         Spacer(Modifier.height(16.dp))
 
-        // Step indicator
+        // Step indicator — stays visible, not in the scroll area
         StepIndicator(currentStep = state.currentStep, totalSteps = state.totalSteps)
 
         Spacer(Modifier.height(24.dp))
 
-        // Current step label
-        if (state.stepLabel.isNotBlank()) {
-            Text(
-                text = state.stepLabel,
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.height(16.dp))
-        }
-
-        // Processing spinner
-        if (state.isProcessing) {
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.Center,
-            ) {
-                CircularProgressIndicator(modifier = Modifier.size(48.dp))
-            }
-            Spacer(Modifier.height(16.dp))
-        }
-
-        // Ticket info (once created)
-        state.ticket?.let { ticket ->
-            TicketSummaryCard(
-                ticketNumber = ticket.ticketNumber,
-                dailyFolio = ticket.dailyFolio,
-                customerName = ticket.customerName,
-                amount = ticket.totalAmount,
-            )
-            Spacer(Modifier.height(16.dp))
-        }
-
-        // Critical warning (payment succeeded but API failed)
-        if (state.isCritical) {
-            CriticalWarningCard(
-                transactionId = state.transactionId,
-                errorMessage = state.errorMessage,
-            )
-            Spacer(Modifier.height(16.dp))
-        }
-
-        // Error message (non-critical)
-        if (!state.isCritical && state.errorMessage != null) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                ),
-            ) {
+        // Scrollable content area
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState()),
+        ) {
+            // Current step label
+            if (state.stepLabel.isNotBlank()) {
                 Text(
-                    text = state.errorMessage,
-                    modifier = Modifier.padding(16.dp),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    text = state.stepLabel,
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics { liveRegion = LiveRegionMode.Polite },
+                    textAlign = TextAlign.Center,
                 )
+                Spacer(Modifier.height(16.dp))
             }
-            Spacer(Modifier.height(16.dp))
-        }
 
-        // Completed state
-        if (state.transactionState is TransactionState.Completed) {
-            CompletedContent(ticket = state.ticket)
-            Spacer(Modifier.height(24.dp))
-            Button(
-                onClick = onCompleted,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-            ) {
-                Text("Volver a tickets", style = MaterialTheme.typography.titleMedium)
-            }
-        }
-
-        // Action buttons
-        if (state.canRetry || state.canSkip || state.canCancel) {
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-        }
-
-        if (state.canRetry) {
-            Button(
-                onClick = { viewModel.retry() },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp),
-                colors = if (state.isCritical) {
-                    ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error,
+            // Processing spinner
+            if (state.isProcessing) {
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .semantics { contentDescription = "Cargando" },
                     )
-                } else {
-                    ButtonDefaults.buttonColors()
-                },
-            ) {
-                Text(
-                    text = if (state.isCritical) "Reintentar sincronizacion" else "Reintentar",
+                }
+                Spacer(Modifier.height(16.dp))
+            }
+
+            // Ticket info (once created)
+            state.ticket?.let { ticket ->
+                TicketSummaryCard(
+                    ticketNumber = ticket.ticketNumber,
+                    dailyFolio = ticket.dailyFolio,
+                    customerName = ticket.customerName,
+                    amount = ticket.totalAmount,
                 )
+                Spacer(Modifier.height(16.dp))
             }
-            Spacer(Modifier.height(8.dp))
-        }
 
-        if (state.canSkip) {
-            OutlinedButton(
-                onClick = { viewModel.skipPrint() },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text("Omitir impresion")
+            // Critical warning (payment succeeded but API failed)
+            if (state.isCritical) {
+                CriticalWarningCard(
+                    transactionId = state.transactionId,
+                    errorMessage = state.errorMessage,
+                )
+                Spacer(Modifier.height(16.dp))
             }
-            Spacer(Modifier.height(8.dp))
-        }
 
-        if (state.canCancel && state.transactionState !is TransactionState.Completed) {
-            OutlinedButton(
-                onClick = {
-                    viewModel.cancel()
-                    onCancelled()
-                },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(
-                    text = if (state.isCritical) {
-                        "Volver (el cargo YA fue realizado)"
+            // Error message (non-critical)
+            if (!state.isCritical && state.errorMessage != null) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                    ),
+                ) {
+                    Text(
+                        text = state.errorMessage,
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .semantics { liveRegion = LiveRegionMode.Polite },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                }
+                Spacer(Modifier.height(16.dp))
+            }
+
+            // Completed state
+            if (state.transactionState is TransactionState.Completed) {
+                CompletedContent(ticket = state.ticket)
+                Spacer(Modifier.height(24.dp))
+                Button(
+                    onClick = onCompleted,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                ) {
+                    Text("Volver a tickets", style = MaterialTheme.typography.titleMedium)
+                }
+            }
+
+            // Action buttons
+            if (state.canRetry || state.canSkip || state.canCancel) {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            }
+
+            if (state.canRetry) {
+                Button(
+                    onClick = { viewModel.retry() },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    colors = if (state.isCritical) {
+                        ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error,
+                        )
                     } else {
-                        "Cancelar"
+                        ButtonDefaults.buttonColors()
                     },
-                )
+                ) {
+                    Text(
+                        text = if (state.isCritical) "Reintentar sincronizacion" else "Reintentar",
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
             }
-        }
 
-        Spacer(Modifier.height(24.dp))
+            if (state.canSkip) {
+                OutlinedButton(
+                    onClick = { viewModel.skipPrint() },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .defaultMinSize(minHeight = 48.dp),
+                ) {
+                    Text("Omitir impresion")
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+
+            if (state.canCancel && state.transactionState !is TransactionState.Completed) {
+                OutlinedButton(
+                    onClick = {
+                        viewModel.cancel()
+                        onCancelled()
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .defaultMinSize(minHeight = 48.dp),
+                ) {
+                    Text(
+                        text = if (state.isCritical) {
+                            "Volver (el cargo YA fue realizado)"
+                        } else {
+                            "Cancelar"
+                        },
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(24.dp))
+        }
     }
 }
 
@@ -214,9 +295,19 @@ private fun StepIndicator(currentStep: Int, totalSteps: Int) {
                 else -> MaterialTheme.colorScheme.outlineVariant
             }
 
+            val stepState = when {
+                isCompleted -> "completado"
+                isActive -> "actual"
+                else -> "pendiente"
+            }
+
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .semantics(mergeDescendants = true) {
+                        contentDescription = "Paso $stepNum: $label, $stepState"
+                    },
             ) {
                 Box(
                     modifier = Modifier
@@ -269,7 +360,11 @@ private fun TicketSummaryCard(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .semantics(mergeDescendants = true) {},
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -312,7 +407,11 @@ private fun CriticalWarningCard(
             containerColor = MaterialTheme.colorScheme.errorContainer,
         ),
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .semantics { liveRegion = LiveRegionMode.Assertive },
+        ) {
             Text(
                 text = "ATENCION: Cobro realizado",
                 style = MaterialTheme.typography.titleMedium,
@@ -364,12 +463,16 @@ private fun CompletedContent(ticket: com.cleanx.lcx.core.model.Ticket?) {
             text = "\u2713",
             style = MaterialTheme.typography.displayLarge,
             color = MaterialTheme.colorScheme.secondary,
+            modifier = Modifier.semantics {
+                contentDescription = "Ticket completado exitosamente"
+            },
         )
         Spacer(Modifier.height(8.dp))
         Text(
             text = "Ticket completado",
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.secondary,
+            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
         )
         ticket?.let {
             Spacer(Modifier.height(4.dp))
