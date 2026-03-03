@@ -89,6 +89,12 @@ fun LcxNavHost() {
                 onTicketClick = { ticket ->
                     navController.navigate(Screen.TicketDetail(ticketId = ticket.id))
                 },
+                onSignOut = {
+                    navController.navigate(Screen.Login) {
+                        popUpTo<Screen.TicketList> { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
             )
         }
 

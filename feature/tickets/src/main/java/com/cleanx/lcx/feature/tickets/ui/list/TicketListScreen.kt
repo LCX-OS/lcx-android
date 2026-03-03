@@ -21,6 +21,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -50,6 +51,7 @@ fun TicketListScreen(
     viewModel: TicketListViewModel,
     onCreateTicket: () -> Unit,
     onTicketClick: (Ticket) -> Unit,
+    onSignOut: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -64,6 +66,15 @@ fun TicketListScreen(
                         "Tickets",
                         modifier = Modifier.semantics { heading() },
                     )
+                },
+                actions = {
+                    TextButton(
+                        onClick = {
+                            viewModel.signOut(onSignedOut = onSignOut)
+                        },
+                    ) {
+                        Text("Salir")
+                    }
                 },
             )
         },

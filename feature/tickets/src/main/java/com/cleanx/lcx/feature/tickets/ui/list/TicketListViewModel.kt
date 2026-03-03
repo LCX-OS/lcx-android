@@ -1,12 +1,15 @@
 package com.cleanx.lcx.feature.tickets.ui.list
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.cleanx.lcx.core.model.Ticket
+import com.cleanx.lcx.core.session.SessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class TicketListUiState(
@@ -16,7 +19,9 @@ data class TicketListUiState(
 )
 
 @HiltViewModel
-class TicketListViewModel @Inject constructor() : ViewModel() {
+class TicketListViewModel @Inject constructor(
+    private val sessionManager: SessionManager,
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TicketListUiState())
     val uiState: StateFlow<TicketListUiState> = _uiState.asStateFlow()
@@ -40,5 +45,12 @@ class TicketListViewModel @Inject constructor() : ViewModel() {
 
     fun clearError() {
         _uiState.update { it.copy(error = null) }
+    }
+
+    fun signOut(onSignedOut: () -> Unit) {
+        viewModelScope.launch {
+            sessionManager.clearSession()
+            onSignedOut()
+        }
     }
 }
