@@ -341,6 +341,16 @@ class TransactionOrchestrator @Inject constructor(
     private suspend fun executePrintLabel(ticket: Ticket) {
         emitAndPersist(TransactionState.PrintingLabel(ticket))
 
+        // Ensure printer is connected before attempting to print.
+        // printWithRetry now calls ensureConnected() internally, but we log
+        // the attempt for correlation tracing.
+        Timber.tag("TXN").d(
+            "[%s] Preparing print: connected=%b, selectedPrinter=%s",
+            correlationId,
+            printRepository.isConnected(),
+            printRepository.getSelectedPrinter()?.name ?: "none",
+        )
+
         val label = LabelData(
             ticketNumber = ticket.ticketNumber,
             customerName = ticket.customerName,

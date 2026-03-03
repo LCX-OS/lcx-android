@@ -5,12 +5,15 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.cleanx.lcx.core.network.SessionExpiredInterceptor
+import com.cleanx.lcx.core.session.SessionManager
 import com.cleanx.lcx.core.transaction.ui.TransactionScreen
 import com.cleanx.lcx.core.model.ServiceType
 import com.cleanx.lcx.core.model.Ticket
@@ -27,16 +30,34 @@ import com.cleanx.lcx.feature.tickets.ui.detail.TicketDetailScreen
 import com.cleanx.lcx.feature.tickets.ui.detail.TicketDetailViewModel
 import com.cleanx.lcx.feature.tickets.ui.list.TicketListScreen
 import com.cleanx.lcx.feature.tickets.ui.list.TicketListViewModel
+import timber.log.Timber
 
 private const val NAV_ANIM_DURATION = 300
 
 @Composable
-fun LcxNavHost() {
+fun LcxNavHost(
+    sessionExpiredInterceptor: SessionExpiredInterceptor? = null,
+    sessionManager: SessionManager? = null,
+) {
     val navController = rememberNavController()
 
     // Shared TicketListViewModel scoped to the nav host
     val viewModelStoreOwner = checkNotNull(LocalViewModelStoreOwner.current)
     val ticketListViewModel: TicketListViewModel = hiltViewModel(viewModelStoreOwner)
+
+    // Global 401 handler: clear session and redirect to Login when session expires.
+    if (sessionExpiredInterceptor != null) {
+        LaunchedEffect(Unit) {
+            sessionExpiredInterceptor.sessionExpired.collect {
+                Timber.tag("AUTH").w("Session expired — redirecting to Login")
+                sessionManager?.clearSession()
+                navController.navigate(Screen.Login) {
+                    popUpTo(0) { inclusive = true }
+                    launchSingleTop = true
+                }
+            }
+        }
+    }
 
     NavHost(
         navController = navController,

@@ -71,7 +71,7 @@ fun PrintScreen(
             val printer = pendingPrinterSelection
             when {
                 printer != null -> viewModel.selectPrinter(printer)
-                pendingAutoDiscover -> viewModel.discoverPrinters()
+                pendingAutoDiscover -> viewModel.autoConnectOrDiscover()
             }
         } else {
             viewModel.onBluetoothPermissionDenied()
@@ -90,14 +90,14 @@ fun PrintScreen(
         if (state.finished) onFinished()
     }
 
-    // Auto-start discovery on first composition.
+    // Auto-start: try auto-connect to saved printer first, fall back to discovery.
     LaunchedEffect(Unit) {
         if (state.phase == PrintPhase.IDLE && !state.finished) {
             if (needsBluetoothPermission() && !hasBluetoothConnectPermission(context)) {
                 pendingAutoDiscover = true
                 permissionLauncher.launch(Manifest.permission.BLUETOOTH_CONNECT)
             } else {
-                viewModel.discoverPrinters()
+                viewModel.autoConnectOrDiscover()
             }
         }
     }

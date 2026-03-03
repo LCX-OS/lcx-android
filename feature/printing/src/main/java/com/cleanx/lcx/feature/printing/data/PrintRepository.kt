@@ -1,5 +1,6 @@
 package com.cleanx.lcx.feature.printing.data
 
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
 import javax.inject.Inject
@@ -41,29 +42,29 @@ class PrintRepository @Inject constructor(
     suspend fun tryAutoConnect(): Boolean {
         val autoConnect = printerPreferences.autoConnect.first()
         if (!autoConnect) {
-            Timber.d("PrintRepository: auto-connect disabled")
+            Timber.tag("PRINT").d("Auto-connect disabled")
             return false
         }
 
         val saved = printerPreferences.savedPrinter.first() ?: run {
-            Timber.d("PrintRepository: no saved printer")
+            Timber.tag("PRINT").d("No saved printer for auto-connect")
             return false
         }
 
-        Timber.d("PrintRepository: auto-connecting to saved printer %s", saved.name)
+        Timber.tag("PRINT").d("Auto-connecting to saved printer %s (%s)", saved.name, saved.address)
         val printer = saved.toPrinterInfo()
         selectedPrinter = printer
 
         return try {
             val connected = printerManager.connect(printer)
             if (connected) {
-                Timber.d("PrintRepository: auto-connect succeeded")
+                Timber.tag("PRINT").i("Auto-connect succeeded: %s", saved.name)
             } else {
-                Timber.w("PrintRepository: auto-connect failed — printer unreachable")
+                Timber.tag("PRINT").w("Auto-connect failed — printer unreachable: %s", saved.address)
             }
             connected
         } catch (e: Exception) {
-            Timber.e(e, "PrintRepository: auto-connect threw")
+            Timber.tag("PRINT").e(e, "Auto-connect threw for %s", saved.address)
             false
         }
     }
@@ -82,7 +83,7 @@ class PrintRepository @Inject constructor(
     suspend fun connectToSelected(): Boolean {
         val printer = selectedPrinter
             ?: run {
-                Timber.w("PrintRepository: no printer selected.")
+                Timber.tag("PRINT").w("No printer selected for connect.")
                 return false
             }
         Timber.tag("PRINT").d("Connecting to: %s (%s)", printer.name, printer.address)
@@ -107,11 +108,49 @@ class PrintRepository @Inject constructor(
         printerPreferences.clearPrinter()
     }
 
+    // -- Ensure connected -----------------------------------------------------
+
+    /**
+     * Ensures a printer is connected before printing.
+     *
+     * Strategy:
+     * 1. If already connected, return true immediately.
+     * 2. If a printer is selected (from current session), reconnect.
+     * 3. Otherwise, try auto-connect from saved preferences.
+     *
+     * @return `true` if a printer is ready; `false` if no connection could
+     *         be established (caller should fall back to manual discovery).
+     */
+    suspend fun ensureConnected(): Boolean {
+        if (printerManager.isConnected()) {
+            Timber.tag("PRINT").d("ensureConnected: already connected")
+            return true
+        }
+
+        // Try reconnecting to the currently selected printer first
+        val selected = selectedPrinter
+        if (selected != null) {
+            Timber.tag("PRINT").d("ensureConnected: reconnecting to selected printer %s", selected.name)
+            val reconnected = runCatching { printerManager.connect(selected) }.getOrDefault(false)
+            if (reconnected) {
+                Timber.tag("PRINT").i("ensureConnected: reconnected to %s", selected.name)
+                return true
+            }
+            Timber.tag("PRINT").w("ensureConnected: reconnect to %s failed", selected.name)
+        }
+
+        // Fall back to auto-connect from saved preferences
+        return tryAutoConnect()
+    }
+
     // -- Printing with retry --------------------------------------------------
 
     /**
      * Attempts to print [label] up to [maxAttempts] times, respecting the
      * configured number of copies.
+     *
+     * Automatically ensures a printer is connected before the first attempt.
+     * Between failed attempts, applies exponential backoff (500ms, 1s, 2s).
      *
      * Returns [PrintResult.Success] as soon as one attempt succeeds, or the
      * last [PrintResult.Error] if all attempts fail.
@@ -120,10 +159,19 @@ class PrintRepository @Inject constructor(
         label: LabelData,
         maxAttempts: Int = MAX_RETRY_ATTEMPTS,
     ): PrintResult {
+        // Ensure printer is connected before attempting to print
+        if (!ensureConnected()) {
+            Timber.tag("PRINT").w("printWithRetry: no printer connected and auto-connect failed")
+            return PrintResult.Error(
+                code = "PRINTER_NOT_CONNECTED",
+                message = "No hay impresora conectada. Configure una impresora en ajustes.",
+            )
+        }
+
         val copies = printerPreferences.printCopies.first()
 
         repeat(copies) { copy ->
-            Timber.d("PrintRepository: printing copy ${copy + 1}/$copies")
+            Timber.tag("PRINT").d("Printing copy %d/%d", copy + 1, copies)
             val result = printSingleCopy(label, maxAttempts)
             if (result is PrintResult.Error) {
                 return result
@@ -140,11 +188,30 @@ class PrintRepository @Inject constructor(
         var lastError: PrintResult.Error? = null
 
         repeat(maxAttempts) { attempt ->
-            Timber.tag("PRINT").d("Printing label: ticketNumber=%s, attempt=%d/%d", label.ticketNumber, attempt + 1, maxAttempts)
+            Timber.tag("PRINT").d(
+                "Printing label: ticketNumber=%s, attempt=%d/%d",
+                label.ticketNumber, attempt + 1, maxAttempts,
+            )
+
+            // On retry (not first attempt), apply backoff and reconnect if needed
+            if (attempt > 0) {
+                val backoffMs = RETRY_BASE_DELAY_MS * (1L shl attempt.coerceAtMost(3))
+                Timber.tag("PRINT").d("Retry backoff: %dms before attempt %d", backoffMs, attempt + 1)
+                delay(backoffMs)
+
+                if (!printerManager.isConnected()) {
+                    Timber.tag("PRINT").d("Connection lost, attempting reconnect before retry")
+                    ensureConnected()
+                }
+            }
+
             when (val result = printerManager.print(label)) {
                 is PrintResult.Success -> return result
                 is PrintResult.Error -> {
-                    Timber.w("PrintRepository: attempt ${attempt + 1} failed – ${result.message}")
+                    Timber.tag("PRINT").w(
+                        "Attempt %d/%d failed: code=%s message=%s",
+                        attempt + 1, maxAttempts, result.code, result.message,
+                    )
                     lastError = result
                 }
             }
@@ -158,5 +225,6 @@ class PrintRepository @Inject constructor(
 
     companion object {
         const val MAX_RETRY_ATTEMPTS = 3
+        private const val RETRY_BASE_DELAY_MS = 500L
     }
 }

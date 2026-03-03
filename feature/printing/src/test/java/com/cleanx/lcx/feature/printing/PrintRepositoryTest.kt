@@ -51,6 +51,9 @@ class PrintRepositoryTest {
         every { printerPreferences.autoConnect } returns flowOf(true)
         every { printerPreferences.savedPrinter } returns flowOf(null)
 
+        // Default: printer is connected (so printWithRetry doesn't short-circuit)
+        every { printerManager.isConnected() } returns true
+
         repository = PrintRepository(printerManager, printerPreferences)
     }
 
@@ -221,6 +224,7 @@ class PrintRepositoryTest {
     @Test
     fun `printWithRetry prints multiple copies when configured`() = runTest {
         every { printerPreferences.printCopies } returns flowOf(2)
+        every { printerManager.isConnected() } returns true
         // Re-create repo with updated preferences mock
         repository = PrintRepository(printerManager, printerPreferences)
         coEvery { printerManager.print(sampleLabel) } returns PrintResult.Success
@@ -234,6 +238,7 @@ class PrintRepositoryTest {
     @Test
     fun `printWithRetry stops on error during multi-copy`() = runTest {
         every { printerPreferences.printCopies } returns flowOf(3)
+        every { printerManager.isConnected() } returns true
         repository = PrintRepository(printerManager, printerPreferences)
         coEvery { printerManager.print(sampleLabel) } returnsMany listOf(
             PrintResult.Success,
@@ -266,6 +271,62 @@ class PrintRepositoryTest {
         every { printerManager.isConnected() } returns true
 
         assertTrue(repository.isConnected())
+    }
+
+    // -- ensureConnected ------------------------------------------------------
+
+    @Test
+    fun `ensureConnected returns true when already connected`() = runTest {
+        every { printerManager.isConnected() } returns true
+
+        assertTrue(repository.ensureConnected())
+    }
+
+    @Test
+    fun `ensureConnected reconnects to selected printer`() = runTest {
+        every { printerManager.isConnected() } returns false
+        coEvery { printerManager.connect(fakePrinter) } returns true
+        repository.selectPrinter(fakePrinter)
+
+        assertTrue(repository.ensureConnected())
+        coVerify { printerManager.connect(fakePrinter) }
+    }
+
+    @Test
+    fun `ensureConnected falls back to auto-connect from saved prefs`() = runTest {
+        val saved = SavedPrinter(
+            name = "Saved Printer",
+            address = "192.168.1.200",
+            connectionType = ConnectionType.WIFI,
+        )
+        every { printerManager.isConnected() } returns false
+        every { printerPreferences.autoConnect } returns flowOf(true)
+        every { printerPreferences.savedPrinter } returns flowOf(saved)
+        coEvery { printerManager.connect(any()) } returns true
+
+        assertTrue(repository.ensureConnected())
+        coVerify { printerManager.connect(saved.toPrinterInfo()) }
+    }
+
+    @Test
+    fun `ensureConnected returns false when nothing is available`() = runTest {
+        every { printerManager.isConnected() } returns false
+        every { printerPreferences.autoConnect } returns flowOf(true)
+        every { printerPreferences.savedPrinter } returns flowOf(null)
+
+        assertFalse(repository.ensureConnected())
+    }
+
+    @Test
+    fun `printWithRetry returns PRINTER_NOT_CONNECTED when ensureConnected fails`() = runTest {
+        every { printerManager.isConnected() } returns false
+        every { printerPreferences.autoConnect } returns flowOf(true)
+        every { printerPreferences.savedPrinter } returns flowOf(null)
+
+        val result = repository.printWithRetry(sampleLabel)
+
+        assertTrue(result is PrintResult.Error)
+        assertEquals("PRINTER_NOT_CONNECTED", (result as PrintResult.Error).code)
     }
 
     // -- Forget printer -------------------------------------------------------

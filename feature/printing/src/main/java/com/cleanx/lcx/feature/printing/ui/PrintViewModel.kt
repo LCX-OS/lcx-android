@@ -61,6 +61,30 @@ class PrintViewModel @Inject constructor(
 
     // -- Actions --------------------------------------------------------------
 
+    /**
+     * Try auto-connect first; if successful, skip discovery and print directly.
+     * Falls back to full discovery if auto-connect fails.
+     */
+    fun autoConnectOrDiscover() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(phase = PrintPhase.CONNECTING, errorMessage = null) }
+            try {
+                val autoConnected = printRepository.tryAutoConnect()
+                if (autoConnected) {
+                    Timber.tag("PRINT").i("Auto-connect succeeded, proceeding to print")
+                    val saved = printRepository.getSelectedPrinter()
+                    _uiState.update { it.copy(selectedPrinter = saved) }
+                    printLabel()
+                    return@launch
+                }
+            } catch (e: Exception) {
+                Timber.tag("PRINT").w(e, "Auto-connect failed, falling back to discovery")
+            }
+            // Fall back to normal discovery
+            discoverPrinters()
+        }
+    }
+
     fun discoverPrinters() {
         viewModelScope.launch {
             _uiState.update { it.copy(phase = PrintPhase.DISCOVERING, errorMessage = null) }
@@ -152,29 +176,33 @@ class PrintViewModel @Inject constructor(
             }
 
             // 2. Print
-            val label = labelData
-            if (label == null) {
+            printLabel()
+        }
+    }
+
+    private suspend fun printLabel() {
+        val label = labelData
+        if (label == null) {
+            _uiState.update {
+                it.copy(
+                    phase = PrintPhase.ERROR,
+                    errorMessage = "No hay datos de etiqueta.",
+                )
+            }
+            return
+        }
+
+        _uiState.update { it.copy(phase = PrintPhase.PRINTING) }
+        when (val result = printRepository.printWithRetry(label)) {
+            is PrintResult.Success -> {
+                _uiState.update { it.copy(phase = PrintPhase.SUCCESS) }
+            }
+            is PrintResult.Error -> {
                 _uiState.update {
                     it.copy(
                         phase = PrintPhase.ERROR,
-                        errorMessage = "No hay datos de etiqueta.",
+                        errorMessage = result.message,
                     )
-                }
-                return@launch
-            }
-
-            _uiState.update { it.copy(phase = PrintPhase.PRINTING) }
-            when (val result = printRepository.printWithRetry(label)) {
-                is PrintResult.Success -> {
-                    _uiState.update { it.copy(phase = PrintPhase.SUCCESS) }
-                }
-                is PrintResult.Error -> {
-                    _uiState.update {
-                        it.copy(
-                            phase = PrintPhase.ERROR,
-                            errorMessage = result.message,
-                        )
-                    }
                 }
             }
         }

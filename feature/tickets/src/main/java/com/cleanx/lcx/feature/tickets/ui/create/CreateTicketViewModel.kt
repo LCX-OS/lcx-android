@@ -67,6 +67,9 @@ class CreateTicketViewModel @Inject constructor(
     fun submit() {
         val state = _uiState.value
 
+        // Idempotency: ignore repeated taps while already submitting
+        if (state.isSubmitting) return
+
         // Validation
         if (state.customerName.isBlank()) {
             _uiState.update { it.copy(error = "El nombre del cliente es obligatorio.") }
