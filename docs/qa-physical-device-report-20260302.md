@@ -180,12 +180,16 @@ Racional: hace inclusivo el corte temporal, evita dejar “zombies” terminales
 | ID | Severidad | Estado | Descripción |
 |---|---|---|---|
 | QA-20260302-01 | P1 | FIXED | Cleanup de transacciones terminales no inclusivo en límite temporal (`<` vs `<=`). |
+| QA-20260302-BT-PERM | P1 | FIXED | `BLUETOOTH_CONNECT` estaba denegado en Android 16; se añadió solicitud runtime en flujos de impresión/settings y permiso en manifest. |
 | QA-20260302-BLOCKER-USB | P0 (infra) | OPEN | No hay dispositivo visible en `adb`; bloquea QA físico USB end-to-end. |
 | QA-20260302-BROTHER-AAR | P0 | OPEN | No se puede activar impresión física real sin `BrotherPrintLibrary.aar`; build cae a `StubPrinterManager` por diseño. |
 
 ## 8) Commits
 - `800b8ec` - `fix(android): make terminal transaction cleanup inclusive at cutoff`
 - `29db1ae` - `docs(qa): add physical-device QA report for 2026-03-02`
+- `1b5cf4c` - `fix(printing-ui): wire label payload and request bluetooth permission`
+- `76340c4` - `feat(printing): add Brother SDK v4 manager with optional AAR wiring`
+- `0b9ae0a` - `docs(qa): update physical-device report with Brother integration status`
 
 ## 9) Próximo paso operativo para cerrar QA físico
 1. Conectar teléfono por USB y autorizar huella RSA (`adb devices -l` debe mostrar estado `device`).
