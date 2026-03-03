@@ -1,13 +1,37 @@
 # QA Physical Device Report - 2026-03-02
 
+## 0) Actualización 2026-03-02 (Integración Brother SDK real)
+- Estado USB/ADB: **PASS**.
+- Preflight obligatorio ejecutado:
+  - `adb devices -l` -> `Pixel_9 ... device`
+  - `adb reverse tcp:3000 tcp:3000` -> OK
+  - `adb reverse tcp:54321 tcp:54321` -> OK
+- Instalación física:
+  - `./gradlew :app:installDevDebug` -> **PASS** (`Installed on 1 device.`).
+- Integración aplicada en Android:
+  - Nuevo `BrotherPrinterManager` real (SDK v4) con bridge por reflexión.
+  - Wiring Hilt en `PrintModule` para usar real manager cuando `USE_REAL_BROTHER=true`.
+  - Flag dev configurable: `LCX_DEV_USE_REAL_BROTHER`.
+  - Configuración explícita de etiqueta 209 (`DieCutW62H29` / DK-1209).
+  - Solicitud runtime de permiso `BLUETOOTH_CONNECT` en pantallas de impresión/settings.
+- Bloqueo actual para impresión física real:
+  - Falta AAR de Brother en `feature/printing/libs/BrotherPrintLibrary.aar`.
+  - Evidencia en build:
+    - `Brother SDK AAR not found ... Real printing will be unavailable for this build.`
+- Severidad:
+  - **P0 abierto**: sin AAR no hay impresión física real (solo fallback controlado a stub).
+
 ## 1) Resumen Ejecutivo
 - Fecha/hora de ejecución: 2026-03-02 17:56:25 CST (America/Mexico_City).
 - Objetivo: QA P0 real en teléfono Android por USB contra entorno local.
-- Resultado general: **NO COMPLETADO EN DISPOSITIVO FÍSICO** por bloqueo de infraestructura (`adb` sin device conectado).
+- Resultado general: **PARCIAL EN DISPOSITIVO FÍSICO**.
+  - Infra USB/ADB: resuelta (ver sección 0).
+  - QA físico end-to-end con impresión real: pendiente por falta del AAR Brother.
 - Cobertura alternativa ejecutada: pruebas unitarias/contrato/regresión completas en Android + validación de rutas API y correlación en backend.
 - Hallazgos críticos:
   - **P1** corregido: cleanup de transacciones terminales en límite temporal (`updatedAt <= cutoff`).
-  - **P0 abiertos**: ninguno detectado en cobertura automatizada local.
+  - **P0 abiertos**:
+    - `QA-20260302-BROTHER-AAR` (sin AAR no hay impresión física real).
 
 ## 2) Contexto y Entorno
 - Android repo: `/Users/diegolden/Code/LCX/lcx-android` (base `af294f3`, rama `main`).
@@ -33,7 +57,17 @@ List of devices attached
 adb: no devices/emulators found
 adb: no devices/emulators found
 ```
-Estado: **FAIL** (bloqueante por falta de dispositivo USB visible por ADB).
+Estado inicial: **FAIL**.
+
+Actualización posterior:
+```text
+List of devices attached
+49281FDAQ0011J         device usb:1-1 product:tokay model:Pixel_9 device:tokay transport_id:1
+
+UsbFfs tcp:3000 tcp:3000
+UsbFfs tcp:54321 tcp:54321
+```
+Estado actual: **PASS**.
 
 ### 3.2 Servicios locales
 - Web local (`bun run dev`): **PASS**
@@ -55,17 +89,24 @@ LCX_DEV_SUPABASE_ANON_KEY=<from supabase status -o env> \
 ```
 Resultado:
 - Compilación: **PASS**
-- Instalación en device: **FAIL**
+- Instalación en device: **FAIL** (intento inicial)
+- Instalación en device: **PASS** (intento actualizado)
 
 Evidencia:
 ```text
 Execution failed for task ':app:installDevDebug'.
 com.android.builder.testing.api.DeviceException: No connected devices!
+
+...
+
+Task :app:installDevDebug
+Installing APK 'app-dev-debug.apk' on 'Pixel 9 - 16' for :app:dev-debug
+Installed on 1 device.
 ```
 
 ## 4) Q2 Functional P0 Agent (Checklist)
 
-> Nota: El tramo “en teléfono físico por USB” no pudo ejecutarse. Se marca FAIL físico y se añade cobertura automatizada equivalente donde aplica.
+> Nota: el bloqueo USB inicial se resolvió. Aun falta cerrar ejecución manual end-to-end con impresión real porque no está presente el AAR de Brother.
 
 | Caso P0 | Físico USB | Cobertura alternativa local | Evidencia |
 |---|---|---|---|
@@ -83,7 +124,7 @@ com.android.builder.testing.api.DeviceException: No connected devices!
 ## 5) Q3 Observability Agent
 
 ### 5.1 Captura de logs en dispositivo
-- `adb logcat` con filtros `TXN|HTTP|TICKET|PAYMENT|PRINT|Correlation`: **NO EJECUTABLE** (sin device).
+- `adb logcat` con filtros `TXN|HTTP|TICKET|PAYMENT|PRINT|Correlation`: **EJECUTABLE** (device visible). Evidencia final pendiente en corrida con AAR Brother.
 
 ### 5.2 Trazabilidad por correlación (verificación de implementación)
 - Android emite/propaga correlación y logs por tags:
@@ -140,6 +181,7 @@ Racional: hace inclusivo el corte temporal, evita dejar “zombies” terminales
 |---|---|---|---|
 | QA-20260302-01 | P1 | FIXED | Cleanup de transacciones terminales no inclusivo en límite temporal (`<` vs `<=`). |
 | QA-20260302-BLOCKER-USB | P0 (infra) | OPEN | No hay dispositivo visible en `adb`; bloquea QA físico USB end-to-end. |
+| QA-20260302-BROTHER-AAR | P0 | OPEN | No se puede activar impresión física real sin `BrotherPrintLibrary.aar`; build cae a `StubPrinterManager` por diseño. |
 
 ## 8) Commits
 - `800b8ec` - `fix(android): make terminal transaction cleanup inclusive at cutoff`
