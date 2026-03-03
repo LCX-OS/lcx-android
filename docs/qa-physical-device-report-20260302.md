@@ -1,200 +1,173 @@
 # QA Physical Device Report - 2026-03-02
 
-## 0) Actualización 2026-03-02 (Integración Brother SDK real)
-- Estado USB/ADB: **PASS**.
-- Preflight obligatorio ejecutado:
-  - `adb devices -l` -> `Pixel_9 ... device`
-  - `adb reverse tcp:3000 tcp:3000` -> OK
-  - `adb reverse tcp:54321 tcp:54321` -> OK
-- Instalación física:
-  - `./gradlew :app:installDevDebug` -> **PASS** (`Installed on 1 device.`).
-- Integración aplicada en Android:
-  - Nuevo `BrotherPrinterManager` real (SDK v4) con bridge por reflexión.
-  - Wiring Hilt en `PrintModule` para usar real manager cuando `USE_REAL_BROTHER=true`.
-  - Flag dev configurable: `LCX_DEV_USE_REAL_BROTHER`.
-  - Configuración explícita de etiqueta 209 (`DieCutW62H29` / DK-1209).
-  - Solicitud runtime de permiso `BLUETOOTH_CONNECT` en pantallas de impresión/settings.
-- Bloqueo actual para impresión física real:
-  - Falta AAR de Brother en `feature/printing/libs/BrotherPrintLibrary.aar`.
-  - Evidencia en build:
-    - `Brother SDK AAR not found ... Real printing will be unavailable for this build.`
-- Severidad:
-  - **P0 abierto**: sin AAR no hay impresión física real (solo fallback controlado a stub).
+## 0) Estado actual (actualizado 2026-03-02 19:32 CST)
+- USB/ADB: **PASS**.
+- Web local + Supabase local: **PASS**.
+- Build/instalación dev en Pixel 9: **PASS**.
+- Impresión Brother real (etiqueta 209): **PASS** (evidencia física en logcat).
+- Hallazgo crítico del retry: `401 NOT_AUTHENTICATED` al crear ticket con sesión expirada.
+- Fix aplicado en Android para re-login manual desde flujo operativo: botón `Salir` en `TicketList` que limpia sesión y vuelve a `Login`.
 
-## 1) Resumen Ejecutivo
-- Fecha/hora de ejecución: 2026-03-02 17:56:25 CST (America/Mexico_City).
-- Objetivo: QA P0 real en teléfono Android por USB contra entorno local.
-- Resultado general: **PARCIAL EN DISPOSITIVO FÍSICO**.
-  - Infra USB/ADB: resuelta (ver sección 0).
-  - QA físico end-to-end con impresión real: pendiente por falta del AAR Brother.
-- Cobertura alternativa ejecutada: pruebas unitarias/contrato/regresión completas en Android + validación de rutas API y correlación en backend.
-- Hallazgos críticos:
-  - **P1** corregido: cleanup de transacciones terminales en límite temporal (`updatedAt <= cutoff`).
-  - **P0 abiertos**:
-    - `QA-20260302-BROTHER-AAR` (sin AAR no hay impresión física real).
+## 1) Contexto y entorno
+- Android repo: `/Users/diegolden/Code/LCX/lcx-android`.
+- Backend repo: `/Users/diegolden/Code/LCX/v0-lcx-pwa`.
+- Device físico: Pixel 9 (Android 16), serial `49281FDAQ0011J`.
+- Contratos backend validados contra local:
+  - `POST /api/tickets`
+  - `PATCH /api/tickets/:id/status`
+  - `PATCH /api/tickets/:id/payment`
 
-## 2) Contexto y Entorno
-- Android repo: `/Users/diegolden/Code/LCX/lcx-android` (base `af294f3`, rama `main`).
-- Web/backend repo: `/Users/diegolden/Code/LCX/v0-lcx-pwa` (commit `5431d23`, rama `main`).
-- Stack backend local validado: Next.js API routes + Supabase local.
-- Config dev Android validada en build generado:
-  - `API_BASE_URL = http://127.0.0.1:3000`
-  - `SUPABASE_URL = http://127.0.0.1:54321`
-  - `SUPABASE_ANON_KEY = <desde supabase status -o env>`
+Variables dev usadas en instalación:
 
-## 3) Q1 Preflight Agent
-
-### 3.1 Comandos obligatorios
 ```bash
-adb devices
-adb reverse tcp:3000 tcp:3000
-adb reverse tcp:54321 tcp:54321
+LCX_DEV_API_BASE_URL=http://127.0.0.1:3000
+LCX_DEV_SUPABASE_URL=http://127.0.0.1:54321
+LCX_DEV_SUPABASE_ANON_KEY=<ANON_KEY de supabase status -o env>
 ```
-Resultado:
+
+## 2) Q1 Preflight Agent
+
+Comandos ejecutados:
+
+```bash
+/Users/diegolden/Library/Android/sdk/platform-tools/adb devices -l
+/Users/diegolden/Library/Android/sdk/platform-tools/adb reverse tcp:3000 tcp:3000
+/Users/diegolden/Library/Android/sdk/platform-tools/adb reverse tcp:54321 tcp:54321
+```
+
+Salida:
+
 ```text
 List of devices attached
-
-adb: no devices/emulators found
-adb: no devices/emulators found
-```
-Estado inicial: **FAIL**.
-
-Actualización posterior:
-```text
-List of devices attached
-49281FDAQ0011J         device usb:1-1 product:tokay model:Pixel_9 device:tokay transport_id:1
+49281FDAQ0011J device usb:1-1 product:tokay model:Pixel_9 device:tokay transport_id:1
 
 UsbFfs tcp:3000 tcp:3000
 UsbFfs tcp:54321 tcp:54321
 ```
-Estado actual: **PASS**.
 
-### 3.2 Servicios locales
-- Web local (`bun run dev`): **PASS**
-- Supabase local (`supabase status`): **PASS**
+Servicios locales:
 
-Evidencia:
 ```text
 node ... TCP *:3000 (LISTEN)
+supabase local development setup is running.
 Project URL: http://127.0.0.1:54321
 ```
 
-### 3.3 Build/instalación dev
-Comando:
+Instalación dev:
+
 ```bash
-LCX_DEV_API_BASE_URL=http://127.0.0.1:3000 \
-LCX_DEV_SUPABASE_URL=http://127.0.0.1:54321 \
-LCX_DEV_SUPABASE_ANON_KEY=<from supabase status -o env> \
 ./gradlew :app:installDevDebug
 ```
+
 Resultado:
-- Compilación: **PASS**
-- Instalación en device: **FAIL** (intento inicial)
-- Instalación en device: **PASS** (intento actualizado)
 
-Evidencia:
 ```text
-Execution failed for task ':app:installDevDebug'.
-com.android.builder.testing.api.DeviceException: No connected devices!
-
-...
-
 Task :app:installDevDebug
 Installing APK 'app-dev-debug.apk' on 'Pixel 9 - 16' for :app:dev-debug
 Installed on 1 device.
 ```
 
-## 4) Q2 Functional P0 Agent (Checklist)
+## 3) Q2 Functional P0 Agent (checklist mínimo)
 
-> Nota: el bloqueo USB inicial se resolvió. Aun falta cerrar ejecución manual end-to-end con impresión real porque no está presente el AAR de Brother.
+| Caso P0 | Resultado físico | Evidencia |
+|---|---|---|
+| Login válido/inválido | **FAIL (retry)** | `401 NOT_AUTHENTICATED` en `POST /api/tickets` por sesión expirada. Ver `docs/evidence/20260302/retry-auth-401.md` |
+| Crear ticket (validación + éxito) | **PASS** | `ticket_create` 200 + correlación `f712a2b8-ea26-447c-a0a6-e189d10e4a2e` |
+| Cobro success | **PASS** | `PAYMENT Charge result: Success` + `PATCH /payment` 200 (correlations `922314e0...`, `4ebb80b9...`) |
+| Cobro cancel (NO paid) | **PENDING** | Sin corrida física dedicada en esta sesión |
+| Cobro success + fallo API (retry sync, NO recobrar) | **PENDING** | Cubierto por tests, falta corrida física dedicada |
+| Impresión success | **PASS** | `BrotherPrinterManager`, discovery 16, `Brother print success` |
+| Impresión fail + retry | **PENDING** | Sin corrida física dedicada en esta sesión |
+| Impresión skip | **PENDING** | Sin corrida física dedicada en esta sesión |
+| Reanudación tras kill app (`resumeTransaction`) | **PENDING** | Sin corrida física dedicada en esta sesión |
+| Opening checklist bloqueante (409) con mensaje claro | **PENDING (físico)** | Cobertura de contrato PASS (`CreateTicketsContractTest`) |
 
-| Caso P0 | Físico USB | Cobertura alternativa local | Evidencia |
-|---|---|---|---|
-| Login válido/inválido | FAIL (bloqueado) | PASS | `AuthRepositoryTest` 9/9 OK |
-| Crear ticket (validación + éxito) | FAIL (bloqueado) | PASS | `CreateTicketsContractTest` 16/16 OK |
-| Cobro success | FAIL (bloqueado) | PASS | `TransactionOrchestratorTest` (happy path) |
-| Cobro cancel (NO paid) | FAIL (bloqueado) | PASS | `TransactionOrchestratorTest` (`payment cancellation`) |
-| Cobro success + fallo API (retry sync, NO recobrar) | FAIL (bloqueado) | PASS | `TransactionOrchestratorTest` (`PaymentSucceededApiFailed` + retry sync) |
-| Impresión success | FAIL (bloqueado) | PASS | `TransactionOrchestratorTest` |
-| Impresión fail + retry | FAIL (bloqueado) | PASS | `TransactionOrchestratorTest` (`print failure then retry succeeds`) |
-| Impresión skip | FAIL (bloqueado) | PASS | `TransactionOrchestratorTest` (`print failure then skip`) |
-| Reanudación tras kill app (`resumeTransaction`) | FAIL (bloqueado) | PASS | `TransactionOrchestratorTest` (bloque resume) + `TransactionPersistenceTest` |
-| Opening checklist bloqueante (409) con mensaje claro | FAIL (bloqueado) | PASS | `CreateTicketsContractTest` (`409 OPENING_CHECKLIST...`) |
+## 4) Q3 Observability Agent
 
-## 5) Q3 Observability Agent
+### 4.1 Evidencia física de impresión real
+Archivo: `docs/evidence/20260302/device-smoke-summary.md`
 
-### 5.1 Captura de logs en dispositivo
-- `adb logcat` con filtros `TXN|HTTP|TICKET|PAYMENT|PRINT|Correlation`: **EJECUTABLE** (device visible). Evidencia final pendiente en corrida con AAR Brother.
+Líneas clave:
 
-### 5.2 Trazabilidad por correlación (verificación de implementación)
-- Android emite/propaga correlación y logs por tags:
-  - `TXN` en `TransactionOrchestrator`
-  - `HTTP` en `CorrelationIdInterceptor`
-  - `TICKET`, `PAYMENT`, `PRINT` en repositorios
-- Backend consume `X-Correlation-Id` y registra en `audit_logs`:
-  - `POST /api/tickets` -> `action: ticket_create`
-  - `PATCH /api/tickets/:id/status` -> `action: status_update`
-  - `PATCH /api/tickets/:id/payment` -> `action: payment_update`
-
-Estado Q3: **PARCIAL** (implementación validada por código, evidencia runtime end-to-end pendiente de device).
-
-## 6) Q4 Bugfix Agent
-
-### 6.1 Bug detectado
-- ID: `QA-20260302-01`
-- Severidad: **P1**
-- Área: persistencia de transacciones (`cleanup`)
-- Síntoma: con `maxAge=0`, registros `COMPLETED/CANCELLED` en el límite temporal no se eliminaban (condición estricta `<`).
-- Evidencia inicial:
 ```text
-TransactionPersistenceTest > cleanup removes old completed records but keeps active ones FAILED
-expected null, but was SavedTransaction(... phase=COMPLETED ...)
+[f712a2b8-ea26-447c-a0a6-e189d10e4a2e] POST http://127.0.0.1:3000/api/tickets
+[f712a2b8-ea26-447c-a0a6-e189d10e4a2e] 200 http://127.0.0.1:3000/api/tickets
+PrintModule: using BrotherPrinterManager (useRealBrother=true)
+Brother discovery completed: 16 printer(s)
+Brother connected: type=WIFI address=192.168.100.47 name=QL-810W
+Brother print success: ticket=T-20260303-0004 folio=4 printer=QL-810W
 ```
 
-### 6.2 Fix aplicado
-- Archivo: `app/src/main/java/com/cleanx/lcx/core/transaction/data/TransactionDao.kt`
-- Cambio:
-```sql
-AND updatedAt < :olderThan
-```
-->
-```sql
-AND updatedAt <= :olderThan
+### 4.2 Correlación móvil -> backend
+Comando:
+
+```bash
+cd /Users/diegolden/Code/LCX/v0-lcx-pwa
+scripts/qa/correlation-audit-proof.sh f712a2b8-ea26-447c-a0a6-e189d10e4a2e
 ```
 
-Racional: hace inclusivo el corte temporal, evita dejar “zombies” terminales en el borde exacto del cutoff.
+Resultado:
 
-### 6.3 Regresión post-fix
-- `:app:testProdReleaseUnitTest --tests "...TransactionPersistenceTest.cleanup removes old completed records but keeps active ones"` -> **PASS**
-- `./gradlew test` -> **PASS**
-- Suites P0 relevantes verificadas (XML):
-  - `TransactionOrchestratorTest` 22/22 OK
-  - `TransactionPersistenceTest` 11/11 OK
-  - `CreateTicketsContractTest` 16/16 OK
-  - `UpdatePaymentContractTest` 13/13 OK
-  - `UpdateStatusContractTest` 13/13 OK
-  - `AuthRepositoryTest` 9/9 OK
+```text
+| ticket_create | 2026-03-03 01:14:52.733 | /api/tickets | f712a2b8-ea26-447c-a0a6-e189d10e4a2e | source=encargo count=1 |
+```
 
-## 7) Bugs (con severidad)
+### 4.3 Retry con 401 (sin auditoría)
+Archivo: `docs/evidence/20260302/retry-auth-401.md`
+
+Correlations:
+- `51356494-2991-4c11-b2cb-1b8bbd5704f8`
+- `807c34a8-d022-45f9-832a-0358132f50c7`
+
+Ambas sin filas en `audit_logs` porque el request falla en auth antes de persistencia.
+
+## 5) Q4 Bugfix Agent
+
+### 5.1 Bugs detectados y severidad
 
 | ID | Severidad | Estado | Descripción |
 |---|---|---|---|
-| QA-20260302-01 | P1 | FIXED | Cleanup de transacciones terminales no inclusivo en límite temporal (`<` vs `<=`). |
-| QA-20260302-BT-PERM | P1 | FIXED | `BLUETOOTH_CONNECT` estaba denegado en Android 16; se añadió solicitud runtime en flujos de impresión/settings y permiso en manifest. |
-| QA-20260302-BLOCKER-USB | P0 (infra) | OPEN | No hay dispositivo visible en `adb`; bloquea QA físico USB end-to-end. |
-| QA-20260302-BROTHER-AAR | P0 | OPEN | No se puede activar impresión física real sin `BrotherPrintLibrary.aar`; build cae a `StubPrinterManager` por diseño. |
+| QA-20260302-01 | P1 | FIXED | Cleanup de transacciones terminales (`updatedAt <= cutoff`). |
+| QA-20260302-BT-PERM | P1 | FIXED | Permiso `BLUETOOTH_CONNECT` solicitado en runtime. |
+| QA-20260302-BLOCKER-USB | P0 (infra) | RESOLVED | `adb` y reverse ports funcionando en Pixel 9. |
+| QA-20260302-BROTHER-AAR | P0 | RESOLVED (local) | AAR cargado desde `bpsdka4130.zip` y build instalado con impresión real. |
+| QA-20260302-RELOGIN-ROUTE | P0 | FIXED (pendiente retest UX) | No había ruta visible para re-login cuando expira sesión; se agregó `Salir` en `TicketList` para limpiar sesión y volver a `Login`. |
 
-## 8) Commits
-- `800b8ec` - `fix(android): make terminal transaction cleanup inclusive at cutoff`
-- `29db1ae` - `docs(qa): add physical-device QA report for 2026-03-02`
-- `1b5cf4c` - `fix(printing-ui): wire label payload and request bluetooth permission`
-- `76340c4` - `feat(printing): add Brother SDK v4 manager with optional AAR wiring`
-- `0b9ae0a` - `docs(qa): update physical-device report with Brother integration status`
+### 5.2 Fix aplicado en esta corrida
+Archivos modificados:
+- `app/src/main/java/com/cleanx/lcx/core/navigation/LcxNavHost.kt`
+- `feature/tickets/src/main/java/com/cleanx/lcx/feature/tickets/ui/list/TicketListScreen.kt`
+- `feature/tickets/src/main/java/com/cleanx/lcx/feature/tickets/ui/list/TicketListViewModel.kt`
 
-## 9) Próximo paso operativo para cerrar QA físico
-1. Conectar teléfono por USB y autorizar huella RSA (`adb devices -l` debe mostrar estado `device`).
-2. Repetir:
-   - `adb reverse tcp:3000 tcp:3000`
-   - `adb reverse tcp:54321 tcp:54321`
-   - `./gradlew :app:installDevDebug`
-3. Ejecutar checklist P0 en dispositivo y adjuntar evidencia `adb logcat` + correlación en `audit_logs`.
+Cambio funcional:
+- Acción `Salir` en top bar de `TicketList`.
+- `Salir` ejecuta `SessionManager.clearSession()`.
+- Navegación explícita a `Screen.Login` (re-login disponible sin matar app).
+
+### 5.3 Regresión ejecutada
+
+```bash
+./gradlew :app:installDevDebug
+```
+
+Resultado: **PASS** (`Installed on 1 device.`).
+
+## 6) Commits relevantes
+Histórico base:
+- `983fd9f`
+- `c7722f8`
+- `af294f3`
+- `800b8ec`
+- `1b5cf4c`
+- `76340c4`
+- `0b9ae0a`
+- `b103c04`
+
+Corrida actual:
+- (pendiente de commit en esta actualización de reporte)
+
+## 7) Estado final de cierre P0
+- Bloqueantes de infraestructura (USB/ADB): **cerrados**.
+- Bloqueante de impresión real Brother: **cerrado localmente** con AAR presente.
+- Flujo real con impresión física: **demostrado**.
+- Bloqueo operativo nuevo (sesión expirada sin ruta de re-login): **fix aplicado**, pendiente confirmar UX final en dispositivo con prueba rápida (`Salir -> Login -> Login válido -> Crear ticket`).
