@@ -3,7 +3,7 @@ package com.cleanx.lcx.core.navigation
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.ConfirmationNumber
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -42,9 +42,9 @@ enum class BottomNavItem(
         icon = Icons.Filled.Checklist,
         graphRoute = Screen.ChecklistGraph,
     ),
-    MAS(
-        label = "Mas",
-        icon = Icons.Filled.MoreHoriz,
-        graphRoute = Screen.MoreGraph,
+    CAJA(
+        label = "Caja",
+        icon = Icons.Filled.AttachMoney,
+        graphRoute = Screen.CashGraph,
     ),
 }

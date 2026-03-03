@@ -29,4 +29,5 @@ include(
     ":feature:printing",
     ":feature:water",
     ":feature:checklist",
+    ":feature:cash",
 )

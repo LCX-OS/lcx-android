@@ -41,6 +41,7 @@ import com.cleanx.lcx.ui.placeholder.ChecklistScreen
 import com.cleanx.lcx.ui.placeholder.DashboardScreen
 import com.cleanx.lcx.ui.placeholder.MoreScreen
 import com.cleanx.lcx.ui.placeholder.WaterScreen
+import com.cleanx.lcx.feature.cash.ui.CashScreen
 
 /**
  * Post-login shell that owns the bottom navigation bar and the nested
@@ -245,6 +246,13 @@ fun MainScaffold(
             navigation<Screen.MoreGraph>(startDestination = Screen.More) {
                 composable<Screen.More> {
                     MoreScreen()
+                }
+            }
+
+            // ── Caja (Cash) tab ──────────────────────────────────────
+            navigation<Screen.CashGraph>(startDestination = Screen.Cash) {
+                composable<Screen.Cash> {
+                    CashScreen()
                 }
             }
         }

@@ -141,6 +141,7 @@ dependencies {
     implementation(project(":feature:tickets"))
     implementation(project(":feature:payments"))
     implementation(project(":feature:printing"))
+    implementation(project(":feature:cash"))
 
     // AndroidX Core
     implementation(libs.androidx.core.ktx)
