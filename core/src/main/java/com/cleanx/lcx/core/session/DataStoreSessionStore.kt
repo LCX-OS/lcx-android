@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.cleanx.lcx.core.model.UserRole
 import com.cleanx.lcx.core.network.TokenProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.catch
@@ -44,13 +45,37 @@ class DataStoreSessionStore @Inject constructor(
         }
     }
 
+    override fun getUserRole(): UserRole? = runBlocking {
+        context.sessionDataStore.data
+            .catch { exception ->
+                if (exception is IOException) {
+                    emit(emptyPreferences())
+                } else {
+                    throw exception
+                }
+            }
+            .map { preferences -> preferences[USER_ROLE] }
+            .first()
+            ?.let { roleName ->
+                UserRole.entries.firstOrNull { it.name.equals(roleName, ignoreCase = true) }
+            }
+    }
+
+    override suspend fun saveUserRole(role: UserRole) {
+        context.sessionDataStore.edit { preferences ->
+            preferences[USER_ROLE] = role.name.lowercase()
+        }
+    }
+
     override suspend fun clearSession() {
         context.sessionDataStore.edit { preferences: MutablePreferences ->
             preferences.remove(ACCESS_TOKEN)
+            preferences.remove(USER_ROLE)
         }
     }
 
     private companion object {
         val ACCESS_TOKEN: Preferences.Key<String> = stringPreferencesKey("access_token")
+        val USER_ROLE: Preferences.Key<String> = stringPreferencesKey("user_role")
     }
 }

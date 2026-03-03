@@ -49,6 +49,10 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
 
+    // Supabase (profile fetch for role)
+    implementation(libs.supabase.postgrest)
+    implementation(libs.ktor.client.okhttp)
+
     // Serialization
     implementation(libs.kotlinx.serialization.json)
 
@@ -64,4 +68,6 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.supabase.postgrest)
+    testImplementation(libs.ktor.client.okhttp)
 }

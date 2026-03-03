@@ -31,9 +31,12 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import com.cleanx.lcx.core.model.UserRole
+import com.cleanx.lcx.core.navigation.RouteAccess
 import com.cleanx.lcx.core.navigation.Screen
 
 /**
@@ -125,10 +128,20 @@ private fun buildSections(): List<MoreSection> = listOf(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MoreScreen(
+    userRole: UserRole,
     onNavigate: (Screen) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val sections = buildSections()
+    // Filter sections: only show items the user's role can access.
+    val sections = remember(userRole) {
+        buildSections()
+            .map { section ->
+                section.copy(
+                    items = section.items.filter { RouteAccess.canAccess(userRole, it.screen) },
+                )
+            }
+            .filter { it.items.isNotEmpty() }
+    }
 
     Scaffold(
         modifier = modifier,

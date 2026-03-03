@@ -24,6 +24,7 @@ import com.cleanx.lcx.BuildConfig
 import com.cleanx.lcx.core.model.ServiceType
 import com.cleanx.lcx.core.model.Ticket
 import com.cleanx.lcx.core.navigation.BottomNavItem
+import com.cleanx.lcx.core.navigation.RouteAccess
 import com.cleanx.lcx.core.navigation.Screen
 import com.cleanx.lcx.feature.payments.ui.ChargeScreen
 import com.cleanx.lcx.feature.payments.ui.PaymentDiagnosticsScreen
@@ -68,12 +69,19 @@ fun MainScaffold(
     // so it survives tab switches within the scaffold.
     val viewModelStoreOwner = checkNotNull(LocalViewModelStoreOwner.current)
     val ticketListViewModel: TicketListViewModel = hiltViewModel(viewModelStoreOwner)
+    val mainScaffoldViewModel: MainScaffoldViewModel = hiltViewModel(viewModelStoreOwner)
+    val userRole = mainScaffoldViewModel.userRole
+
+    // Filter bottom nav items by the current user's role.
+    val visibleTabs = remember(userRole) {
+        BottomNavItem.entries.filter { RouteAccess.canAccessTab(userRole, it.graphRoute) }
+    }
 
     Scaffold(
         modifier = modifier,
         bottomBar = {
             NavigationBar {
-                BottomNavItem.entries.forEach { item ->
+                visibleTabs.forEach { item ->
                     val selected = currentDestination?.hierarchy?.any {
                         it.hasRoute(item.graphRoute::class)
                     } == true
@@ -262,8 +270,11 @@ fun MainScaffold(
             navigation<Screen.MoreGraph>(startDestination = Screen.More) {
                 composable<Screen.More> {
                     MoreScreen(
+                        userRole = userRole,
                         onNavigate = { screen ->
-                            tabNavController.navigate(screen)
+                            if (RouteAccess.canAccess(userRole, screen)) {
+                                tabNavController.navigate(screen)
+                            }
                         },
                     )
                 }

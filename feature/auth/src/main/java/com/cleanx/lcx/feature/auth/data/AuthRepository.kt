@@ -1,10 +1,20 @@
 package com.cleanx.lcx.feature.auth.data
 
+import com.cleanx.lcx.core.model.UserRole
 import com.cleanx.lcx.core.session.SessionManager
+import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.postgrest.postgrest
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
+
+@Serializable
+private data class ProfileRow(
+    @SerialName("role") val role: String,
+)
 
 /**
  * Handles Supabase authentication via the Next.js-proxied API or directly
@@ -19,6 +29,7 @@ import javax.inject.Singleton
 class AuthRepository @Inject constructor(
     private val authApi: AuthApi,
     private val sessionManager: SessionManager,
+    private val supabaseClient: SupabaseClient,
     private val json: Json,
 ) {
 
@@ -31,6 +42,10 @@ class AuthRepository @Inject constructor(
                 if (body != null) {
                     val userId = body.user?.id ?: body.userId ?: ""
                     sessionManager.saveAccessToken(body.accessToken)
+
+                    // Fetch and persist the user role from the profiles table.
+                    fetchAndSaveUserRole(userId)
+
                     Timber.i("Auth: signed in user %s", userId)
                     AuthResult.Success(
                         userId = userId,
@@ -71,5 +86,26 @@ class AuthRepository @Inject constructor(
         // For now we don't persist userId separately; the token is the proof.
         // A future enhancement could decode the JWT to extract sub.
         return if (isAuthenticated()) "authenticated" else null
+    }
+
+    fun getUserRole(): UserRole? = sessionManager.getUserRole()
+
+    private suspend fun fetchAndSaveUserRole(userId: String) {
+        try {
+            val profile = supabaseClient.postgrest["profiles"]
+                .select { filter { eq("id", userId) } }
+                .decodeSingle<ProfileRow>()
+
+            val role = UserRole.entries.firstOrNull {
+                it.name.equals(profile.role, ignoreCase = true)
+            } ?: UserRole.EMPLOYEE
+
+            sessionManager.saveUserRole(role)
+            Timber.i("Auth: user role = %s", role)
+        } catch (e: Exception) {
+            // Default to employee if profile fetch fails — non-blocking.
+            Timber.w(e, "Auth: failed to fetch user role, defaulting to EMPLOYEE")
+            sessionManager.saveUserRole(UserRole.EMPLOYEE)
+        }
     }
 }

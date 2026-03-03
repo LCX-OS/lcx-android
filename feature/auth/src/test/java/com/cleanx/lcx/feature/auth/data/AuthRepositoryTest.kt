@@ -1,6 +1,7 @@
 package com.cleanx.lcx.feature.auth.data
 
 import com.cleanx.lcx.core.session.SessionManager
+import io.github.jan.supabase.SupabaseClient
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -20,6 +21,7 @@ class AuthRepositoryTest {
 
     private lateinit var authApi: AuthApi
     private lateinit var sessionManager: SessionManager
+    private lateinit var supabaseClient: SupabaseClient
     private lateinit var repository: AuthRepository
     private val json = Json { ignoreUnknownKeys = true; coerceInputValues = true }
 
@@ -27,7 +29,8 @@ class AuthRepositoryTest {
     fun setUp() {
         authApi = mockk()
         sessionManager = mockk(relaxUnitFun = true)
-        repository = AuthRepository(authApi, sessionManager, json)
+        supabaseClient = mockk(relaxed = true)
+        repository = AuthRepository(authApi, sessionManager, supabaseClient, json)
     }
 
     // -- Sign in success stores token --
