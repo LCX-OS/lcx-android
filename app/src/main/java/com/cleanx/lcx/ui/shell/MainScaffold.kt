@@ -1,15 +1,11 @@
 package com.cleanx.lcx.ui.shell
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.ui.Alignment
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -47,6 +43,7 @@ import com.cleanx.lcx.core.transaction.ui.TransactionScreen
 import com.cleanx.lcx.ui.placeholder.ChecklistScreen
 import com.cleanx.lcx.ui.placeholder.DashboardScreen
 import com.cleanx.lcx.ui.more.MoreScreen
+import com.cleanx.lcx.ui.ops.*
 import com.cleanx.lcx.ui.placeholder.WaterScreen
 import com.cleanx.lcx.feature.cash.ui.CashScreen
 
@@ -271,60 +268,60 @@ fun MainScaffold(
                     )
                 }
 
-                // ── Operator module routes (placeholder shells) ─────
+                // ── Operator module routes (structured shells) ──────
                 composable<Screen.Sales> {
-                    OperatorPlaceholder("Ventas - Próximamente")
+                    SalesShell(onBack = { tabNavController.popBackStack() })
                 }
                 composable<Screen.IncidentsNew> {
-                    OperatorPlaceholder("Nueva Incidencia - Próximamente")
+                    IncidentsNewShell(onBack = { tabNavController.popBackStack() })
                 }
                 composable<Screen.IncidentsHistory> {
-                    OperatorPlaceholder("Historial de Incidencias - Próximamente")
+                    IncidentsHistoryShell(onBack = { tabNavController.popBackStack() })
                 }
                 composable<Screen.ShiftsControl> {
-                    OperatorPlaceholder("Control de Turnos - Próximamente")
+                    ShiftsControlShell(onBack = { tabNavController.popBackStack() })
                 }
                 composable<Screen.ShiftsHistory> {
-                    OperatorPlaceholder("Historial de Turnos - Próximamente")
+                    ShiftsHistoryShell(onBack = { tabNavController.popBackStack() })
                 }
                 composable<Screen.ShiftsSchedule> {
-                    OperatorPlaceholder("Horarios - Próximamente")
+                    ShiftsScheduleShell(onBack = { tabNavController.popBackStack() })
                 }
                 composable<Screen.ShiftsReports> {
-                    OperatorPlaceholder("Reportes de Turnos - Próximamente")
+                    ShiftsReportsShell(onBack = { tabNavController.popBackStack() })
                 }
                 composable<Screen.DamagedClothingNew> {
-                    OperatorPlaceholder("Ropa Dañada - Nuevo Reporte - Próximamente")
+                    DamagedClothingNewShell(onBack = { tabNavController.popBackStack() })
                 }
                 composable<Screen.DamagedClothingHistory> {
-                    OperatorPlaceholder("Ropa Dañada - Historial - Próximamente")
+                    DamagedClothingHistoryShell(onBack = { tabNavController.popBackStack() })
                 }
                 composable<Screen.SuppliesInventory> {
-                    OperatorPlaceholder("Inventario de Insumos - Próximamente")
+                    SuppliesInventoryShell(onBack = { tabNavController.popBackStack() })
                 }
                 composable<Screen.SuppliesLabels> {
-                    OperatorPlaceholder("Etiquetas - Próximamente")
+                    SuppliesLabelsShell(onBack = { tabNavController.popBackStack() })
                 }
                 composable<Screen.SuppliesReports> {
-                    OperatorPlaceholder("Reportes de Insumos - Próximamente")
+                    SuppliesReportsShell(onBack = { tabNavController.popBackStack() })
                 }
                 composable<Screen.SuppliesBrotherDebug> {
-                    OperatorPlaceholder("Debug Brother - Próximamente")
+                    SuppliesBrotherDebugShell(onBack = { tabNavController.popBackStack() })
                 }
                 composable<Screen.Vacations> {
-                    OperatorPlaceholder("Vacaciones - Próximamente")
+                    VacationsShell(onBack = { tabNavController.popBackStack() })
                 }
                 composable<Screen.CalendarMonthly> {
-                    OperatorPlaceholder("Calendario - Vista Mensual - Próximamente")
+                    CalendarMonthlyShell(onBack = { tabNavController.popBackStack() })
                 }
                 composable<Screen.CalendarEvents> {
-                    OperatorPlaceholder("Calendario - Eventos - Próximamente")
+                    CalendarEventsShell(onBack = { tabNavController.popBackStack() })
                 }
                 composable<Screen.BestPractices> {
-                    OperatorPlaceholder("Mejores Prácticas - Próximamente")
+                    BestPracticesShell(onBack = { tabNavController.popBackStack() })
                 }
                 composable<Screen.Help> {
-                    OperatorPlaceholder("Ayuda - Próximamente")
+                    HelpShell(onBack = { tabNavController.popBackStack() })
                 }
             }
 
@@ -340,23 +337,6 @@ fun MainScaffold(
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────
-
-/**
- * Simple centered text placeholder used for operator module screens
- * that are not yet implemented. Will be replaced by proper shells in R3.
- */
-@Composable
-private fun OperatorPlaceholder(title: String) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-        )
-    }
-}
 
 private fun Ticket.toLabelData(): LabelData {
     val serviceTypeLabel = when (serviceType) {
