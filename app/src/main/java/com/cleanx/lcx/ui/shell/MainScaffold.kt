@@ -7,6 +7,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -70,7 +71,7 @@ fun MainScaffold(
     val viewModelStoreOwner = checkNotNull(LocalViewModelStoreOwner.current)
     val ticketListViewModel: TicketListViewModel = hiltViewModel(viewModelStoreOwner)
     val mainScaffoldViewModel: MainScaffoldViewModel = hiltViewModel(viewModelStoreOwner)
-    val userRole = mainScaffoldViewModel.userRole
+    val userRole by mainScaffoldViewModel.userRole.collectAsState()
 
     // Filter bottom nav items by the current user's role.
     val visibleTabs = remember(userRole) {

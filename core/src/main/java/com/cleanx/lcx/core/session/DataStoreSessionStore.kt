@@ -10,6 +10,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.cleanx.lcx.core.model.UserRole
 import com.cleanx.lcx.core.network.TokenProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -26,14 +27,7 @@ class DataStoreSessionStore @Inject constructor(
 ) : SessionManager, TokenProvider {
 
     override fun getAccessToken(): String? = runBlocking {
-        context.sessionDataStore.data
-            .catch { exception ->
-                if (exception is IOException) {
-                    emit(emptyPreferences())
-                } else {
-                    throw exception
-                }
-            }
+        sessionPreferencesFlow()
             .map { preferences -> preferences[ACCESS_TOKEN] }
             .first()
             ?.takeIf { it.isNotBlank() }
@@ -46,19 +40,15 @@ class DataStoreSessionStore @Inject constructor(
     }
 
     override fun getUserRole(): UserRole? = runBlocking {
-        context.sessionDataStore.data
-            .catch { exception ->
-                if (exception is IOException) {
-                    emit(emptyPreferences())
-                } else {
-                    throw exception
-                }
-            }
-            .map { preferences -> preferences[USER_ROLE] }
-            .first()
-            ?.let { roleName ->
+        observeUserRole().first()
+    }
+
+    override fun observeUserRole(): Flow<UserRole?> {
+        return sessionPreferencesFlow().map { preferences ->
+            preferences[USER_ROLE]?.let { roleName ->
                 UserRole.entries.firstOrNull { it.name.equals(roleName, ignoreCase = true) }
             }
+        }
     }
 
     override suspend fun saveUserRole(role: UserRole) {
@@ -77,5 +67,16 @@ class DataStoreSessionStore @Inject constructor(
     private companion object {
         val ACCESS_TOKEN: Preferences.Key<String> = stringPreferencesKey("access_token")
         val USER_ROLE: Preferences.Key<String> = stringPreferencesKey("user_role")
+    }
+
+    private fun sessionPreferencesFlow(): Flow<Preferences> {
+        return context.sessionDataStore.data
+            .catch { exception ->
+                if (exception is IOException) {
+                    emit(emptyPreferences())
+                } else {
+                    throw exception
+                }
+            }
     }
 }
