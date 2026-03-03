@@ -20,4 +20,13 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "LCX"
-include(":app", ":core", ":feature:auth", ":feature:tickets", ":feature:payments", ":feature:printing", ":feature:water")
+include(
+    ":app",
+    ":core",
+    ":feature:auth",
+    ":feature:tickets",
+    ":feature:payments",
+    ":feature:printing",
+    ":feature:water",
+    ":feature:checklist",
+)
