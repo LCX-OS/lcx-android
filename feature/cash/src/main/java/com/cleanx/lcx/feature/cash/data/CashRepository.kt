@@ -1,11 +1,13 @@
 package com.cleanx.lcx.feature.cash.data
 
 import com.cleanx.lcx.core.network.SupabaseTableClient
+import com.cleanx.lcx.core.session.SessionManager
 import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.postgrest.query.Order
 import timber.log.Timber
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.util.Base64
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -18,6 +20,7 @@ import javax.inject.Singleton
 @Singleton
 class CashRepository @Inject constructor(
     private val supabase: SupabaseTableClient,
+    private val sessionManager: SessionManager,
 ) {
     private val table = "cash_movements"
 
@@ -74,7 +77,15 @@ class CashRepository @Inject constructor(
             insert.amount,
         )
 
-        return supabase.insertReturning<CashMovementInsert, CashMovementRow>(table, insert)
+        val resolvedUserId = insert.userId?.takeIf { it.isNotBlank() } ?: currentUserIdFromToken()
+        if (resolvedUserId.isNullOrBlank()) {
+            val message = "No hay sesion valida para registrar movimiento de caja."
+            Timber.tag("CAJA").w(message)
+            return Result.failure(IllegalStateException(message))
+        }
+
+        val payload = insert.copy(userId = resolvedUserId)
+        return supabase.insertReturning<CashMovementInsert, CashMovementRow>(table, payload)
     }
 
     // -- MOVEMENT HISTORY -----------------------------------------------------
@@ -185,5 +196,21 @@ class CashRepository @Inject constructor(
             canClose = canClose,
             canCloseReason = canCloseReason,
         )
+    }
+
+    private fun currentUserIdFromToken(): String? {
+        val token = sessionManager.getAccessToken()?.takeIf { it.isNotBlank() } ?: return null
+        val parts = token.split('.')
+        if (parts.size < 2) return null
+
+        return runCatching {
+            val payloadBase64Url = parts[1]
+            val padded = payloadBase64Url + "=".repeat((4 - payloadBase64Url.length % 4) % 4)
+            val payloadJson = String(Base64.getUrlDecoder().decode(padded))
+            Regex("\"sub\"\\s*:\\s*\"([^\"]+)\"")
+                .find(payloadJson)
+                ?.groupValues
+                ?.getOrNull(1)
+        }.getOrNull()
     }
 }
