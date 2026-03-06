@@ -139,6 +139,7 @@ dependencies {
     implementation(project(":core"))
     implementation(project(":feature:auth"))
     implementation(project(":feature:tickets"))
+    implementation(project(":feature:loyalty"))
     implementation(project(":feature:payments"))
     implementation(project(":feature:printing"))
     implementation(project(":feature:cash"))

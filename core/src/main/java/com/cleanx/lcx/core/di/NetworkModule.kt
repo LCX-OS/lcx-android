@@ -3,6 +3,9 @@ package com.cleanx.lcx.core.di
 import com.cleanx.lcx.core.config.BuildConfigProvider
 import com.cleanx.lcx.core.network.AuthInterceptor
 import com.cleanx.lcx.core.network.CorrelationIdInterceptor
+import com.cleanx.lcx.core.network.LoyaltyApi
+import com.cleanx.lcx.core.network.PayloadCaptureInterceptor
+import com.cleanx.lcx.core.network.PayloadCaptureWriter
 import com.cleanx.lcx.core.network.SessionExpiredInterceptor
 import com.cleanx.lcx.core.network.TicketApi
 import dagger.Module
@@ -35,6 +38,7 @@ object NetworkModule {
         authInterceptor: AuthInterceptor,
         correlationIdInterceptor: CorrelationIdInterceptor,
         sessionExpiredInterceptor: SessionExpiredInterceptor,
+        payloadCaptureWriter: PayloadCaptureWriter,
         config: BuildConfigProvider,
     ): OkHttpClient {
         return OkHttpClient.Builder()
@@ -43,6 +47,12 @@ object NetworkModule {
             .addInterceptor(sessionExpiredInterceptor)
             .apply {
                 if (config.isDebug) {
+                    addInterceptor(
+                        PayloadCaptureInterceptor(
+                            channel = "api",
+                            writer = payloadCaptureWriter,
+                        ),
+                    )
                     addInterceptor(
                         HttpLoggingInterceptor().apply {
                             level = HttpLoggingInterceptor.Level.BODY
@@ -67,5 +77,11 @@ object NetworkModule {
     @Singleton
     fun provideTicketApi(retrofit: Retrofit): TicketApi {
         return retrofit.create(TicketApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideLoyaltyApi(retrofit: Retrofit): LoyaltyApi {
+        return retrofit.create(LoyaltyApi::class.java)
     }
 }
