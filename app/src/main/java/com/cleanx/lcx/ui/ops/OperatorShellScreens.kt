@@ -53,22 +53,28 @@ fun OperatorShellScreen(
     description: String,
     icon: ImageVector,
     onBack: () -> Unit,
+    showTopBar: Boolean = true,
+    showBackButton: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
         modifier = modifier,
         topBar = {
-            TopAppBar(
-                title = { Text(text = title) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Regresar",
-                        )
+            if (showTopBar) {
+                TopAppBar(
+                    title = { Text(text = title) },
+                    navigationIcon = {
+                        if (showBackButton) {
+                            IconButton(onClick = onBack) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Regresar",
+                                )
+                            }
+                        }
                     }
-                },
-            )
+                )
+            }
         },
     ) { innerPadding ->
         Column(
@@ -124,12 +130,17 @@ fun OperatorShellScreen(
 // ── Sales ───────────────────────────────────────────────────────────────
 
 @Composable
-fun SalesShell(onBack: () -> Unit, modifier: Modifier = Modifier) {
+fun SalesShell(
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+    showTopBar: Boolean = true,
+) {
     OperatorShellScreen(
         title = "Ventas",
         description = "Registro y consulta de ventas",
         icon = Icons.Filled.ShoppingCart,
         onBack = onBack,
+        showTopBar = showTopBar,
         modifier = modifier,
     )
 }
@@ -161,12 +172,17 @@ fun IncidentsHistoryShell(onBack: () -> Unit, modifier: Modifier = Modifier) {
 // ── Shifts ──────────────────────────────────────────────────────────────
 
 @Composable
-fun ShiftsControlShell(onBack: () -> Unit, modifier: Modifier = Modifier) {
+fun ShiftsControlShell(
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+    showTopBar: Boolean = true,
+) {
     OperatorShellScreen(
         title = "Control de Turnos",
         description = "Registrar entrada y salida",
         icon = Icons.Filled.AccessTime,
         onBack = onBack,
+        showTopBar = showTopBar,
         modifier = modifier,
     )
 }

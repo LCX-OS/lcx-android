@@ -1,16 +1,15 @@
 package com.cleanx.lcx.core.navigation
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.AttachMoney
-import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.ConfirmationNumber
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material.icons.filled.WaterDrop
+import androidx.compose.material.icons.filled.PointOfSale
 import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
- * Defines the six bottom-navigation tabs shown after login.
+ * Defines the five bottom-navigation tabs shown after login.
  *
  * Each item carries:
  *  - a user-visible [label] (Spanish, matching the PWA)
@@ -28,29 +27,24 @@ enum class BottomNavItem(
         icon = Icons.Filled.Home,
         graphRoute = Screen.DashboardGraph,
     ),
-    TICKETS(
-        label = "Tickets",
+    VENTAS(
+        label = "Ventas",
+        icon = Icons.Filled.PointOfSale,
+        graphRoute = Screen.SalesGraph,
+    ),
+    ENCARGOS(
+        label = "Encargos",
         icon = Icons.Filled.ConfirmationNumber,
         graphRoute = Screen.TicketsGraph,
     ),
-    AGUA(
-        label = "Agua",
-        icon = Icons.Filled.WaterDrop,
-        graphRoute = Screen.WaterGraph,
-    ),
-    CHECKLIST(
-        label = "Checklist",
-        icon = Icons.Filled.Checklist,
-        graphRoute = Screen.ChecklistGraph,
+    TURNOS(
+        label = "Turnos",
+        icon = Icons.Filled.AccessTime,
+        graphRoute = Screen.ShiftsGraph,
     ),
     CAJA(
         label = "Caja",
         icon = Icons.Filled.AttachMoney,
         graphRoute = Screen.CashGraph,
-    ),
-    MAS(
-        label = "Más",
-        icon = Icons.Filled.MoreHoriz,
-        graphRoute = Screen.MoreGraph,
     ),
 }

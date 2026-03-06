@@ -52,6 +52,7 @@ fun TicketListScreen(
     onCreateTicket: () -> Unit,
     onTicketClick: (Ticket) -> Unit,
     onSignOut: () -> Unit,
+    showTopBar: Boolean = true,
 ) {
     val state by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -60,23 +61,25 @@ fun TicketListScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        "Tickets",
-                        modifier = Modifier.semantics { heading() },
-                    )
-                },
-                actions = {
-                    TextButton(
-                        onClick = {
-                            viewModel.signOut(onSignedOut = onSignOut)
-                        },
-                    ) {
-                        Text("Salir")
+            if (showTopBar) {
+                TopAppBar(
+                    title = {
+                        Text(
+                            "Tickets",
+                            modifier = Modifier.semantics { heading() },
+                        )
+                    },
+                    actions = {
+                        TextButton(
+                            onClick = {
+                                viewModel.signOut(onSignedOut = onSignOut)
+                            },
+                        ) {
+                            Text("Salir")
+                        }
                     }
-                },
-            )
+                )
+            }
         },
         floatingActionButton = {
             FloatingActionButton(onClick = onCreateTicket) {

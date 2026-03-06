@@ -6,6 +6,7 @@ import com.cleanx.lcx.core.model.UserRole
 import com.cleanx.lcx.core.session.SessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -27,4 +28,28 @@ class MainScaffoldViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
             initialValue = UserRole.EMPLOYEE,
         )
+
+    val userEmail: StateFlow<String?> = sessionManager.observeUserEmail()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+            initialValue = null,
+        )
+
+    val userBadgeText: StateFlow<String> = combine(userEmail, userRole) { email, role ->
+        val localPart = email?.substringBefore('@')?.trim().orEmpty()
+        if (localPart.isNotBlank()) {
+            localPart
+        } else {
+            when (role) {
+                UserRole.SUPERADMIN -> "Superadmin"
+                UserRole.MANAGER -> "Gerente"
+                UserRole.EMPLOYEE -> "Operador"
+            }
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+        initialValue = "Operador",
+    )
 }

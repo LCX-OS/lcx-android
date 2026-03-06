@@ -68,6 +68,8 @@ object RouteAccess {
         put(Screen.ChecklistGraph::class.java, ALL_ROLES)
         put(Screen.CashGraph::class.java, ALL_ROLES)
         put(Screen.MoreGraph::class.java, ALL_ROLES)
+        put(Screen.SalesGraph::class.java, ALL_ROLES)
+        put(Screen.ShiftsGraph::class.java, ALL_ROLES)
     }
 
     /** Returns `true` if [role] is allowed to access [screen]. */

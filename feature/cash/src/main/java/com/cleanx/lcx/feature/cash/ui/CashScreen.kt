@@ -27,19 +27,22 @@ private val TABS = listOf("Registrar", "Historial")
 fun CashScreen(
     viewModel: CashViewModel,
     modifier: Modifier = Modifier,
+    showTopBar: Boolean = true,
 ) {
     val state by viewModel.uiState.collectAsState()
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Caja",
-                        modifier = Modifier.semantics { heading() },
-                    )
-                },
-            )
+            if (showTopBar) {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = "Caja",
+                            modifier = Modifier.semantics { heading() },
+                        )
+                    },
+                )
+            }
         },
         modifier = modifier,
     ) { padding ->
