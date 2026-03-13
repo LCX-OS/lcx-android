@@ -151,7 +151,7 @@
       "public": false,
       "route_present": true,
       "parity_done": false,
-      "notes": "form now captures payment status/method/amount, promised pickup date, special instructions, and manual add-ons; still missing customer picker, catalog-backed pricing, inventory extras, and pickup estimate helpers"
+      "notes": "native encargo flow now uses customer picker search/create, live services/add-ons/inventory catalogs, PWA-matched pricing rules, pickup estimate, special-item/shared-pool metadata, and pending/paid creation; pending final manual parity smoke before flipping PARITY_DONE=YES"
     },
     {
       "id": "op-encargos-detail",
