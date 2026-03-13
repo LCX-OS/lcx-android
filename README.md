@@ -32,6 +32,16 @@ Referencia de contrato: `docs/api-contract-spec.md`.
 - `:feature:water` (en desarrollo)
 - `:feature:checklist` (en desarrollo)
 
+Patron actual recomendado para features nuevas o flujos complejos:
+
+- `data/` -> acceso a red / Supabase y modelos de transporte.
+- `domain/<flow>/` -> estado, reducer y use cases puros del flujo.
+- `ui/` -> Compose y `ViewModel` como capa fina de orquestacion.
+
+Referencia viva:
+
+- `docs/architecture/domain-first-feature-pattern.md`
+
 ## Requisitos
 
 - macOS con Android SDK + `adb`.
@@ -82,6 +92,7 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 export PATH="$JAVA_HOME/bin:$PATH"
 
 export LCX_DEV_API_BASE_URL="http://127.0.0.1:3000"
+export LCX_DEV_NOTIFICATIONS_BASE_URL="http://127.0.0.1:8080"
 export LCX_DEV_SUPABASE_URL="http://127.0.0.1:54321"
 export LCX_DEV_SUPABASE_ANON_KEY="$ANON_KEY"
 export LCX_DEV_USE_REAL_BROTHER="true"   # opcional (default false)
@@ -109,6 +120,7 @@ Definicion en `app/build.gradle.kts`:
 Variables soportadas:
 
 - `LCX_DEV_API_BASE_URL`
+- `LCX_DEV_NOTIFICATIONS_BASE_URL`
 - `LCX_DEV_SUPABASE_URL`
 - `LCX_DEV_SUPABASE_ANON_KEY`
 - `LCX_DEV_USE_REAL_BROTHER`
@@ -209,4 +221,3 @@ Reporte base: `docs/qa-physical-device-report-20260302.md`.
 - `docs/porting/route-subagent-backlog-20260303.md`
 - `docs/porting/android-port-wave-report-20260303.md`
 - `docs/porting/caja-wave-report-20260303.md`
-

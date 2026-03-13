@@ -113,3 +113,7 @@ lint/tmp/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Local payload captures generated during manual QA/debugging.
+# Keep curated/redacted evidence tracked explicitly, but ignore new raw dumps by default.
+docs/evidence/**/payload-capture-*.jsonl
