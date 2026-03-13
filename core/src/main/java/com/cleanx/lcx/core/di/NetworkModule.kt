@@ -7,6 +7,7 @@ import com.cleanx.lcx.core.network.LoyaltyApi
 import com.cleanx.lcx.core.network.PayloadCaptureInterceptor
 import com.cleanx.lcx.core.network.PayloadCaptureWriter
 import com.cleanx.lcx.core.network.SessionExpiredInterceptor
+import com.cleanx.lcx.core.network.SmsNotificationApi
 import com.cleanx.lcx.core.network.TicketApi
 import dagger.Module
 import dagger.Provides
@@ -83,5 +84,11 @@ object NetworkModule {
     @Singleton
     fun provideLoyaltyApi(retrofit: Retrofit): LoyaltyApi {
         return retrofit.create(LoyaltyApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideSmsNotificationApi(retrofit: Retrofit): SmsNotificationApi {
+        return retrofit.create(SmsNotificationApi::class.java)
     }
 }
