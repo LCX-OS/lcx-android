@@ -130,6 +130,17 @@ data class ChecklistItemUi(
     val isSystemValidated: Boolean,
 )
 
+data class ChecklistOperationalStatus(
+    val waterReviewedToday: Boolean = false,
+    val openingCashRegisteredToday: Boolean = false,
+    val closingCashRegisteredToday: Boolean = false,
+)
+
+data class ChecklistCompletionGate(
+    val canComplete: Boolean,
+    val reason: String? = null,
+)
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -173,6 +184,19 @@ fun ChecklistItem.toUi(): ChecklistItemUi {
         title = title,
         description = description,
         isSystemValidated = meta.templateId in SYSTEM_VALIDATED_TEMPLATES,
+    )
+}
+
+fun ChecklistType.systemRequirementExpectations(
+    status: ChecklistOperationalStatus,
+): Map<String, Boolean> = when (this) {
+    ChecklistType.ENTRADA -> mapOf(
+        TEMPLATE_WATER_LEVEL to status.waterReviewedToday,
+        TEMPLATE_OPENING_CASH to status.openingCashRegisteredToday,
+    )
+
+    ChecklistType.SALIDA -> mapOf(
+        TEMPLATE_CLOSING_CASH to status.closingCashRegisteredToday,
     )
 }
 
@@ -221,11 +245,31 @@ fun getChecklistProgress(items: List<ChecklistItemUi>): Float {
     return completed.toFloat() / items.size.toFloat()
 }
 
+fun evaluateChecklistCompletion(items: List<ChecklistItem>): ChecklistCompletionGate {
+    if (items.isEmpty()) {
+        return ChecklistCompletionGate(
+            canComplete = false,
+            reason = "No hay tareas en el checklist",
+        )
+    }
+
+    val requiredItems = items.filter { it.parseMetadata().required }
+    val incompleteRequired = requiredItems.filterNot { it.isCompleted }
+    return if (incompleteRequired.isNotEmpty()) {
+        ChecklistCompletionGate(
+            canComplete = false,
+            reason = "Faltan ${incompleteRequired.size} tareas requeridas por completar",
+        )
+    } else {
+        ChecklistCompletionGate(canComplete = true)
+    }
+}
+
 /**
  * Check if all required items are completed.
  */
 fun canCompleteChecklist(items: List<ChecklistItemUi>): Boolean {
-    return items.filter { it.metadata.required }.all { it.item.isCompleted }
+    return evaluateChecklistCompletion(items.map { it.item }).canComplete
 }
 
 /**

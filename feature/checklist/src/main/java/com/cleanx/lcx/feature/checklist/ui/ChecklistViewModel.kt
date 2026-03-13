@@ -5,18 +5,18 @@ import androidx.lifecycle.viewModelScope
 import com.cleanx.lcx.feature.checklist.data.Checklist
 import com.cleanx.lcx.feature.checklist.data.ChecklistItem
 import com.cleanx.lcx.feature.checklist.data.ChecklistItemUi
+import com.cleanx.lcx.feature.checklist.data.ChecklistOperationalStatus
 import com.cleanx.lcx.feature.checklist.data.ChecklistRepository
 import com.cleanx.lcx.feature.checklist.data.ChecklistStatus
 import com.cleanx.lcx.feature.checklist.data.ChecklistType
-import com.cleanx.lcx.feature.checklist.data.TEMPLATE_CLOSING_CASH
-import com.cleanx.lcx.feature.checklist.data.TEMPLATE_OPENING_CASH
-import com.cleanx.lcx.feature.checklist.data.TEMPLATE_WATER_LEVEL
 import com.cleanx.lcx.feature.checklist.data.canCompleteChecklist
+import com.cleanx.lcx.feature.checklist.data.evaluateChecklistCompletion
 import com.cleanx.lcx.feature.checklist.data.getChecklistProgress
 import com.cleanx.lcx.feature.checklist.data.parseMetadata
 import com.cleanx.lcx.feature.checklist.data.requiredItemCounts
 import com.cleanx.lcx.feature.checklist.data.sortChecklistItems
 import com.cleanx.lcx.feature.checklist.data.sortChecklistUiItems
+import com.cleanx.lcx.feature.checklist.data.systemRequirementExpectations
 import com.cleanx.lcx.feature.checklist.data.toUi
 import com.cleanx.lcx.core.session.SessionProfile
 import com.cleanx.lcx.core.session.SessionProfileRepository
@@ -166,15 +166,18 @@ class ChecklistViewModel @Inject constructor(
 
             val waterDone = repository.hasWaterLevelToday(profile.branch)
             val cashDone = repository.hasCashMovementToday(CASH_MOVEMENT_OPENING)
+            val operationalStatus = ChecklistOperationalStatus(
+                waterReviewedToday = waterDone,
+                openingCashRegisteredToday = cashDone,
+            )
 
             repository.getTodayChecklist(ChecklistType.ENTRADA)
                 .onSuccess { (checklist, items) ->
                     val syncedItems = syncSystemItems(
                         items = items,
                         userId = profile.userId,
-                        expectedCompletion = mapOf(
-                            TEMPLATE_WATER_LEVEL to waterDone,
-                            TEMPLATE_OPENING_CASH to cashDone,
+                        expectedCompletion = ChecklistType.ENTRADA.systemRequirementExpectations(
+                            operationalStatus,
                         ),
                     )
                     val uiItems = toUiItems(syncedItems)
@@ -219,13 +222,18 @@ class ChecklistViewModel @Inject constructor(
                 }
 
             val cashDone = repository.hasCashMovementToday(CASH_MOVEMENT_CLOSING)
+            val operationalStatus = ChecklistOperationalStatus(
+                closingCashRegisteredToday = cashDone,
+            )
 
             repository.getTodayChecklist(ChecklistType.SALIDA)
                 .onSuccess { (checklist, items) ->
                     val syncedItems = syncSystemItems(
                         items = items,
                         userId = profile.userId,
-                        expectedCompletion = mapOf(TEMPLATE_CLOSING_CASH to cashDone),
+                        expectedCompletion = ChecklistType.SALIDA.systemRequirementExpectations(
+                            operationalStatus,
+                        ),
                     )
                     val uiItems = toUiItems(syncedItems)
                     val (done, total) = requiredItemCounts(uiItems)
@@ -316,6 +324,17 @@ class ChecklistViewModel @Inject constructor(
             ChecklistType.ENTRADA -> state.entryChecklist?.id
             ChecklistType.SALIDA -> state.exitChecklist?.id
         } ?: return
+        val items = when (type) {
+            ChecklistType.ENTRADA -> state.entryItems.map { it.item }
+            ChecklistType.SALIDA -> state.exitItems.map { it.item }
+        }
+        val completionGate = evaluateChecklistCompletion(items)
+        if (!completionGate.canComplete) {
+            _uiState.update {
+                it.copy(completedMessage = completionGate.reason ?: "No se puede completar el checklist.")
+            }
+            return
+        }
 
         val notes = when (type) {
             ChecklistType.ENTRADA -> state.entryNotes

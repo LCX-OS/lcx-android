@@ -25,6 +25,7 @@ import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -36,6 +37,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.cleanx.lcx.core.theme.LcxSpacing
 import com.cleanx.lcx.core.ui.EmptyState
 import com.cleanx.lcx.core.ui.ErrorState
@@ -59,9 +63,22 @@ fun ChecklistScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val lifecycleOwner = LocalLifecycleOwner.current
 
     LaunchedEffect(Unit) {
         viewModel.refreshSelectedTab()
+    }
+
+    DisposableEffect(lifecycleOwner, viewModel) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refreshSelectedTab()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
     }
 
     // Show completed message as snackbar
@@ -121,6 +138,7 @@ fun ChecklistScreen(
                     onNotesChanged = { viewModel.updateNotes(it, ChecklistType.ENTRADA) },
                     onComplete = { viewModel.completeChecklist(ChecklistType.ENTRADA) },
                     onRetry = { viewModel.loadEntryChecklist() },
+                    onRefresh = { viewModel.loadEntryChecklist() },
                     onActionClick = { route ->
                         when (route) {
                             "water" -> onNavigateToWater?.invoke()
@@ -145,6 +163,7 @@ fun ChecklistScreen(
                     onNotesChanged = { viewModel.updateNotes(it, ChecklistType.SALIDA) },
                     onComplete = { viewModel.completeChecklist(ChecklistType.SALIDA) },
                     onRetry = { viewModel.loadExitChecklist() },
+                    onRefresh = { viewModel.loadExitChecklist() },
                     onActionClick = { route ->
                         when (route) {
                             "water" -> onNavigateToWater?.invoke()
@@ -253,7 +272,10 @@ private fun HistoryItem(checklist: Checklist) {
                     val dateText = try {
                         val date = LocalDate.parse(checklist.date)
                         date.format(
-                            DateTimeFormatter.ofPattern("d MMM yyyy", Locale("es"))
+                            DateTimeFormatter.ofPattern(
+                                "d MMM yyyy",
+                                Locale.forLanguageTag("es"),
+                            )
                         )
                     } catch (_: Exception) {
                         checklist.date

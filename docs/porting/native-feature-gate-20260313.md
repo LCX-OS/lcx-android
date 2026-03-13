@@ -246,6 +246,19 @@ Evidence minima:
 - tests para auto-validacion entry-1 / entry-2 / exit cash rule
 - smoke manual: agua -> caja -> checklist entrada -> checklist salida
 
+Estado al 2026-03-13:
+
+- `Screen.Checklist` ya monta la feature real consolidada en tabs `Entrada` / `Salida` / `Historial`,
+- la auto-validacion sigue el contrato PWA sobre `water_levels` + `cash_movements` (`entry-1`, `entry-2`, `exit-1`) y no depende de `cash_registers`,
+- al volver al foreground o tocar `Verificar`, Android vuelve a sincronizar los items sistemicos para no dejar estado viejo despues de pasar por Agua o Caja,
+- antes de completar un checklist, Android revalida en BD que todos los requeridos sigan completos para no cerrar con drift local o carrera de estado,
+- los checklists completados siguen en modo read-only y el historial nativo conserva el minimo operativo de completados recientes.
+
+Residual exacto para flippear a `DONE`:
+
+- falta smoke manual real `agua -> caja -> checklist entrada -> checklist salida` para validar el loop completo con datos del entorno,
+- el historial sigue en modo minimo; filtros/stats quedan fuera de G1 pero aun no tienen smoke manual que cierre parity operacional completa.
+
 ### G1.5 Encargos nuevo
 
 Estado actual: `DONE`

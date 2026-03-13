@@ -118,7 +118,7 @@
       "public": false,
       "route_present": true,
       "parity_done": false,
-      "notes": "mapped to consolidated Checklist screen/tab; Entrada/Salida/Historial live as tabs and now use the real feature module"
+      "notes": "mapped to consolidated Checklist screen/tab; Entrada/Salida/Historial live as tabs and use the real feature module, entry system items re-sync on resume/manual verify against water_levels + cash_movements, and completion is revalidated against persisted required items before closing"
     },
     {
       "id": "op-checklist-salida",
@@ -129,7 +129,7 @@
       "public": false,
       "route_present": true,
       "parity_done": false,
-      "notes": "mapped to consolidated Checklist screen/tab; Salida lives in the second tab and auto-validates cash closing"
+      "notes": "mapped to consolidated Checklist screen/tab; Salida lives in the second tab, auto-validates closing cash from cash_movements, re-syncs on resume/manual verify, and blocks completion if persisted required items are still incomplete"
     },
     {
       "id": "op-checklist-historial",
@@ -140,7 +140,7 @@
       "public": false,
       "route_present": true,
       "parity_done": false,
-      "notes": "mapped to consolidated Checklist screen/tab; Historial lives in the third tab"
+      "notes": "mapped to consolidated Checklist screen/tab; Historial lives in the third tab and keeps the minimum operator view of completed recent checklists"
     },
     {
       "id": "op-encargos-nuevo",

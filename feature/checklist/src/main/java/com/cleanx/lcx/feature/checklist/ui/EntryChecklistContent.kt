@@ -19,6 +19,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,6 +60,7 @@ fun ChecklistContent(
     onNotesChanged: (String) -> Unit,
     onComplete: () -> Unit,
     onRetry: () -> Unit,
+    onRefresh: (() -> Unit)? = null,
     onActionClick: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
@@ -102,6 +104,7 @@ fun ChecklistContent(
                 onToggleItem = onToggleItem,
                 onNotesChanged = onNotesChanged,
                 onComplete = onComplete,
+                onRefresh = onRefresh,
                 onActionClick = onActionClick,
                 modifier = modifier,
             )
@@ -123,6 +126,7 @@ private fun ChecklistBody(
     onToggleItem: (ChecklistItemUi) -> Unit,
     onNotesChanged: (String) -> Unit,
     onComplete: () -> Unit,
+    onRefresh: (() -> Unit)?,
     onActionClick: ((String) -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
@@ -141,7 +145,12 @@ private fun ChecklistBody(
         // -- Header card: date, time, status badge
         item {
             Spacer(modifier = Modifier.height(LcxSpacing.sm))
-            ChecklistHeaderCard(checklist = checklist, typeLabel = typeLabel)
+            ChecklistHeaderCard(
+                checklist = checklist,
+                typeLabel = typeLabel,
+                showRefreshAction = !isCompleted,
+                onRefresh = onRefresh,
+            )
         }
 
         // -- Progress section
@@ -215,6 +224,8 @@ private fun ChecklistBody(
 private fun ChecklistHeaderCard(
     checklist: Checklist,
     typeLabel: String,
+    showRefreshAction: Boolean,
+    onRefresh: (() -> Unit)?,
 ) {
     LcxCard {
         Row(
@@ -231,7 +242,10 @@ private fun ChecklistHeaderCard(
                 val dateText = try {
                     val date = LocalDate.parse(checklist.date)
                     date.format(
-                        DateTimeFormatter.ofPattern("EEEE d 'de' MMMM, yyyy", Locale("es"))
+                        DateTimeFormatter.ofPattern(
+                            "EEEE d 'de' MMMM, yyyy",
+                            Locale.forLanguageTag("es"),
+                        )
                     )
                 } catch (_: Exception) {
                     checklist.date
@@ -251,8 +265,16 @@ private fun ChecklistHeaderCard(
                 )
             }
 
-            // Status badge
-            StatusBadge(status = checklist.status)
+            Column(horizontalAlignment = Alignment.End) {
+                if (showRefreshAction && onRefresh != null) {
+                    TextButton(onClick = onRefresh) {
+                        Text(text = "Verificar")
+                    }
+                    Spacer(modifier = Modifier.height(LcxSpacing.xs))
+                }
+
+                StatusBadge(status = checklist.status)
+            }
         }
     }
 }

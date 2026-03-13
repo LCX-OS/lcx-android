@@ -71,6 +71,10 @@ class ChecklistRepository @Inject constructor(
         notes: String? = null,
         userId: String? = null,
     ): Result<Checklist> {
+        validateChecklistCompletion(checklistId).getOrElse { error ->
+            return Result.failure(error)
+        }
+
         val payload = ChecklistCompletionUpdate(
             status = ChecklistStatus.COMPLETED,
             completedBy = userId,
@@ -202,6 +206,17 @@ class ChecklistRepository @Inject constructor(
         return supabase.selectWithRequest<ChecklistItem>(itemTable) {
             filter { eq("checklist_id", checklistId) }
             order("created_at", Order.ASCENDING)
+        }
+    }
+
+    private suspend fun validateChecklistCompletion(checklistId: String): Result<Unit> {
+        return selectChecklistItems(checklistId).map { items ->
+            val gate = evaluateChecklistCompletion(items)
+            if (!gate.canComplete) {
+                throw IllegalStateException(gate.reason ?: "No se puede completar el checklist.")
+            }
+        }.onFailure { error ->
+            Timber.w(error, "validateChecklistCompletion(%s) failed", checklistId)
         }
     }
 
