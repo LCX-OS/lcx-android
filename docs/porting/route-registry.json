@@ -74,7 +74,7 @@
       "public": false,
       "route_present": true,
       "parity_done": false,
-      "notes": "native dashboard now replaces the placeholder with real quick actions, routine status, pending tickets, and low-stock supply cards; manual post-login smoke already validated quick actions plus the routine card with a live employee session, including the water status flip to OK after saving a level, but parity stays false until the lower pending cards and non-employee role variants are explicitly rechecked"
+      "notes": "native dashboard now replaces the placeholder with real quick actions, routine status, pending tickets, and low-stock supply cards; manual post-login smoke already validated the employee path end-to-end, including routine state flips for water and cash, live lower cards (`Tickets pendientes` + `Necesidades de suministros`), and navigation from `Abrir` into a real ticket detail, but parity stays false until non-employee role variants are explicitly rechecked"
     },
     {
       "id": "op-agua",
@@ -85,7 +85,7 @@
       "public": false,
       "route_present": true,
       "parity_done": false,
-      "notes": "feature wired to Screen.Water; current scope resolves branch from the signed-in profile, persists recorded_by/branch on writes, mirrors the PWA default empty-state snapshot with 75%/optimal when the branch has no prior water records, and now has real post-login smoke for current level + save + history refresh with a live operator session; parity stays false because the order-water provider path still lacks manual validation"
+      "notes": "feature wired to Screen.Water; current scope resolves branch from the signed-in profile, persists recorded_by/branch on writes, mirrors the PWA default empty-state snapshot with 75%/optimal when the branch has no prior water records, and now has real post-login smoke for current level + save + order water + history refresh with a live operator session; Android also mirrors the PWA audit side effect by writing `water_alerts/push_notification` rows into `audit_logs`, but parity stays false because notify-to-manager delivery is still unproven in the current workspace/environment"
     },
     {
       "id": "op-caja-registrar",
@@ -96,7 +96,7 @@
       "public": false,
       "route_present": true,
       "parity_done": false,
-      "notes": "mapped to consolidated Cash screen/tab; Register lives in the Registrar tab, not a dedicated route"
+      "notes": "mapped to consolidated Cash screen/tab; Register lives in the Registrar tab, not a dedicated route, and manual smoke already covered live opening cash registration plus the downstream auto-validation of checklist entry-2"
     },
     {
       "id": "op-caja-historial",
@@ -107,7 +107,7 @@
       "public": false,
       "route_present": true,
       "parity_done": false,
-      "notes": "mapped to consolidated Cash screen/tab; History lives in the Historial tab, not a dedicated route"
+      "notes": "mapped to consolidated Cash screen/tab; History lives in the Historial tab, not a dedicated route, and manual smoke already covered live closing cash registration plus the downstream auto-validation of checklist exit-1"
     },
     {
       "id": "op-checklist-entrada",
@@ -118,7 +118,7 @@
       "public": false,
       "route_present": true,
       "parity_done": false,
-      "notes": "mapped to consolidated Checklist screen/tab; Entrada/Salida/Historial live as tabs and use the real feature module, entry system items re-sync on resume/manual verify against water_levels + cash_movements, and completion is revalidated against persisted required items before closing; manual post-login smoke already opened Entrada and confirmed entry water auto-validation after saving Agua, but parity stays false until the full agua+caja+entrada+salida completion loop is executed"
+      "notes": "mapped to consolidated Checklist screen/tab; Entrada/Salida/Historial live as tabs and use the real feature module, entry system items re-sync on resume/manual verify against water_levels + cash_movements, and completion is revalidated against persisted required items before closing; manual post-login smoke already opened Entrada and confirmed both entry-1 (after Agua) and entry-2 (after caja apertura), but parity stays false until manual completion of the checklist is executed end-to-end"
     },
     {
       "id": "op-checklist-salida",
@@ -129,7 +129,7 @@
       "public": false,
       "route_present": true,
       "parity_done": false,
-      "notes": "mapped to consolidated Checklist screen/tab; Salida lives in the second tab, auto-validates closing cash from cash_movements, re-syncs on resume/manual verify, and blocks completion if persisted required items are still incomplete; manual post-login smoke already opened the Salida tab, but parity stays false until caja apertura/cierre plus final completion are exercised end-to-end"
+      "notes": "mapped to consolidated Checklist screen/tab; Salida lives in the second tab, auto-validates closing cash from cash_movements, re-syncs on resume/manual verify, and blocks completion if persisted required items are still incomplete; manual post-login smoke already confirmed exit-1 after caja cierre, but parity stays false until final completion is exercised end-to-end and the team decides whether Salida should be allowed to advance while Entrada is still incomplete"
     },
     {
       "id": "op-checklist-historial",
@@ -140,7 +140,7 @@
       "public": false,
       "route_present": true,
       "parity_done": false,
-      "notes": "mapped to consolidated Checklist screen/tab; Historial lives in the third tab and keeps the minimum operator view of completed recent checklists; manual post-login smoke already confirmed the history tab renders completed rows, but parity stays false until the live operational loop produces and verifies fresh completions"
+      "notes": "mapped to consolidated Checklist screen/tab; Historial lives in the third tab and keeps the minimum operator view of completed recent checklists; manual post-login smoke already confirmed the history tab renders completed rows, but parity stays false until the live operational loop produces and verifies fresh completions from the current water+caja cycle"
     },
     {
       "id": "op-encargos-nuevo",

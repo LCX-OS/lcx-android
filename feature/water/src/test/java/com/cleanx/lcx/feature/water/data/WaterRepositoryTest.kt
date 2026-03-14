@@ -2,7 +2,11 @@ package com.cleanx.lcx.feature.water.data
 
 import com.cleanx.lcx.core.model.WaterLevelStatus
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Test
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonPrimitive
 
 class WaterRepositoryTest {
 
@@ -53,5 +57,69 @@ class WaterRepositoryTest {
         assertEquals(provider.name, insert.providerName)
         assertEquals("user-2", insert.recordedBy)
         assertEquals("sucursal-norte", insert.branch)
+    }
+
+    @Test
+    fun `buildWaterAlertAuditLog mirrors pwa payload for critical levels`() {
+        val auditLog = buildWaterAlertAuditLog(
+            levelPercentage = 17,
+            liters = 1_700,
+            status = WaterLevelStatus.CRITICAL,
+            branch = "La Esperanza",
+            performedBy = "user-3",
+            recordId = "1741838400000",
+        )
+
+        assertNotNull(auditLog)
+        requireNotNull(auditLog)
+        assertEquals("water_alerts", auditLog.tableName)
+        assertEquals("push_notification", auditLog.action)
+        assertEquals("1741838400000", auditLog.recordId)
+        assertEquals("user-3", auditLog.performedBy)
+        assertEquals("critical", auditLog.changedData["status"]?.jsonPrimitive?.content)
+        assertEquals(17, auditLog.changedData["level_percentage"]?.jsonPrimitive?.int)
+        assertEquals(1_700, auditLog.changedData["liters"]?.jsonPrimitive?.int)
+        assertEquals("La Esperanza", auditLog.changedData["branch"]?.jsonPrimitive?.content)
+    }
+
+    @Test
+    fun `buildWaterAlertAuditLog also logs low levels`() {
+        val auditLog = buildWaterAlertAuditLog(
+            levelPercentage = 25,
+            liters = 2_500,
+            status = WaterLevelStatus.LOW,
+            branch = null,
+            performedBy = "user-4",
+            recordId = "1741838460000",
+        )
+
+        assertNotNull(auditLog)
+        requireNotNull(auditLog)
+        assertEquals("low", auditLog.changedData["status"]?.jsonPrimitive?.content)
+        assertEquals("null", auditLog.changedData["branch"]?.toString())
+    }
+
+    @Test
+    fun `buildWaterAlertAuditLog skips non alert levels`() {
+        assertNull(
+            buildWaterAlertAuditLog(
+                levelPercentage = 55,
+                liters = 5_500,
+                status = WaterLevelStatus.NORMAL,
+                branch = "La Esperanza",
+                performedBy = "user-5",
+                recordId = "1741838520000",
+            ),
+        )
+        assertNull(
+            buildWaterAlertAuditLog(
+                levelPercentage = 85,
+                liters = 8_500,
+                status = WaterLevelStatus.OPTIMAL,
+                branch = "La Esperanza",
+                performedBy = "user-5",
+                recordId = "1741838580000",
+            ),
+        )
     }
 }

@@ -145,12 +145,13 @@ Estado al 2026-03-13:
 - `Screen.Dashboard` ya no usa placeholder; monta un dashboard nativo con quick actions reales hacia Checklist, Agua, Caja y Nuevo encargo,
 - agrega rutina operativa con estado de checklist entrada/salida, agua y caja sobre datos reales del backend,
 - agrega pendientes operativos minimos con tickets abiertos y suministros bajos sin inventar metricas nuevas,
-- el smoke manual post-login ya confirmo quick actions reales y rutina operativa viva con una sesion `employee` del entorno; tras guardar Agua, el dashboard reflejo `Nivel de agua = OK`.
+- el smoke manual post-login ya confirmo quick actions reales y rutina operativa viva con una sesion `employee` del entorno; tras guardar Agua y registrar apertura/cierre de Caja, el dashboard reflejo `Nivel de agua = OK`, `Apertura de caja = OK` y `Corte de caja = OK`,
+- las tarjetas inferiores tambien quedaron revalidadas con data real: `Tickets pendientes` mostro `Abiertos: 86`, el CTA `Abrir` navego a un detail real (`T-20260306-0001` / `Diego Jimenez`) y `Necesidades de suministros` renderizo su empty state real (`No hay suministros por reordenar.`).
 
 Residual exacto para flippear a `DONE`:
 
-- falta validar de forma explicita las tarjetas inferiores de pendientes (tickets/suministros) y los role variants distintos a `employee` dentro del dashboard nativo,
-- mientras ese smoke no quede documentado, el gate se mantiene en `PARTIAL` aunque quick actions y rutina ya esten vivas post-login.
+- falta validar de forma explicita los role variants distintos a `employee` dentro del dashboard nativo,
+- mientras ese smoke no quede documentado, el gate se mantiene en `PARTIAL` aunque quick actions, rutina y tarjetas inferiores ya esten vivas post-login.
 
 ### G1.2 Agua
 
@@ -171,6 +172,7 @@ Done when:
 - `Screen.Water` deja de usar placeholder y monta `feature/water`,
 - lecturas y escrituras van scoping por branch,
 - inserts guardan `recorded_by` y `branch`,
+- si el contrato vigente usa `audit_logs` para alertar bajo nivel, Android replica el mismo write contract del PWA,
 - existen current tab + history tab + order water,
 - estados `critical/low/normal/optimal` coinciden con PWA,
 - errores y retry UX funcionan,
@@ -179,8 +181,7 @@ Done when:
 No blocker para G1:
 
 - selector de sucursal explicito para manager/superadmin,
-- cache offline local,
-- audit log explicito, si el PWA tampoco lo necesita para operacion inmediata.
+- cache offline local.
 
 Evidence minima:
 
@@ -193,14 +194,16 @@ Estado al 2026-03-13:
 - `Screen.Water` ya monta la feature real con tabs de nivel actual + historial y CTA de pedir agua cuando el tanque cae a critico,
 - lecturas y escrituras siguen resolviendo `branch` y `recorded_by` desde el perfil autenticado,
 - el snapshot inicial ahora replica el comportamiento del PWA cuando no hay registros previos: Android arranca en `75% / optimal` en vez de caer en falso `0% / critical`,
-- la capa `feature/water:data` ya tiene tests puros para snapshot inicial e inserts (`recorded_by`, `branch`, action label y provider payload) y deja evidencia de que el contrato escrito sigue alineado con PWA,
+- la capa `feature/water:data` ya tiene tests puros para snapshot inicial e inserts (`recorded_by`, `branch`, action label, provider payload y alert payload PWA-style) y deja evidencia de que el contrato escrito sigue alineado con PWA,
 - el smoke manual real ya confirmo `Nivel Actual -> Guardar Nivel -> Historial` con sesion operativa: Android guardo `17% / 1,700 L`, mostro feedback `Nivel guardado correctamente`, refresco el historial in-place y el dashboard reflejo `Nivel de agua = OK`,
+- el subflujo `Pedir Agua` tambien quedo humedo manualmente con proveedor real de la UI (`Aguafina Express`): Android mostro `Llamar Proveedor`, registro la orden y refresco historial sin salir de la pantalla,
+- Android ahora escribe el mismo side effect contractual del PWA para alertas de agua (`audit_logs` con `table_name=water_alerts`, `action=push_notification`, branch y payload de nivel) tanto en `Guardar Nivel` como en `Pedir Agua`; se verifico contra Supabase local con filas nuevas `1773464053036` y `1773464170887`,
 - durante ese smoke se cerraron dos residuos reales de Android: `Historial` dejaba de renderizar por un `String.format` invalido y la carga de tickets podia romper por `status=\"paid\"` legado; ambos quedaron endurecidos en codigo y con tests.
 
 Residual exacto para flippear a `DONE`:
 
-- falta smoke manual real del subflujo `Pedir Agua` con proveedor del entorno para cerrar el loop completo `save level -> order water -> refresh history`,
-- selector explicito de sucursal para manager/superadmin, cache offline y audit log siguen fuera de G1 y no bloquean paridad operativa minima.
+- el contrato que si existe hoy ya quedo cubierto hasta `audit_logs`, pero en este workspace/entorno no aparecio un consumidor o backing service verificable que demuestre entrega efectiva de esa alerta al gerente; por eso la parte de notify al gerente sigue sin poder declararse cerrada,
+- selector explicito de sucursal para manager/superadmin y cache offline siguen fuera de G1 y no bloquean la paridad operativa minima.
 
 ### G1.3 Caja
 
@@ -235,6 +238,18 @@ Evidence minima:
 
 - `./gradlew :feature:cash:test`
 - smoke manual apertura -> gasto -> cierre -> historial
+
+Estado al 2026-03-13:
+
+- `Screen.Cash` sigue consolidando registro + historial en un mismo screen/tab sobre `cash_movements`,
+- el smoke manual real ya confirmo apertura de caja (`OPENING $1000.00`) y cierre de caja (`CLOSING $1000.00`) con persistencia backend y reflejo inmediato en Dashboard/Checklist,
+- despues de abrir caja, Dashboard reflejo `Apertura de caja = OK` y Checklist Entrada auto-valido `entry-2` (`Registrar caja inicial`),
+- despues de cerrar caja, Checklist Salida auto-valido `exit-1` (`Cerrar caja`) y el corte quedo visible como registrado hoy.
+
+Residual exacto para flippear a `DONE`:
+
+- en esta pasada no se rehizo smoke manual del subflujo `gasto` ni del preview de discrepancia/desglose de cierre; por eso Caja sigue en `PARTIAL` aunque el loop de apertura/cierre ya este operativo,
+- la feature ya sirve de dependencia real para Dashboard/Checklist, pero todavia falta cerrar el smoke completo `apertura -> gasto -> cierre -> historial` pedido por el gate.
 
 ### G1.4 Checklist entrada / salida / historial
 
@@ -280,11 +295,14 @@ Estado al 2026-03-13:
 - al volver al foreground o tocar `Verificar`, Android vuelve a sincronizar los items sistemicos para no dejar estado viejo despues de pasar por Agua o Caja,
 - antes de completar un checklist, Android revalida en BD que todos los requeridos sigan completos para no cerrar con drift local o carrera de estado,
 - los checklists completados siguen en modo read-only y el historial nativo conserva el minimo operativo de completados recientes,
-- el smoke manual post-login ya confirmo que `Entrada`, `Salida` y `Historial` abren sin shell; despues de guardar Agua, `entry-1` se auto-valido en `Entrada` como `Nivel de agua registrado hoy`, y `Historial` siguio mostrando completados recientes.
+- el smoke manual post-login ya confirmo que `Entrada`, `Salida` y `Historial` abren sin shell; despues de guardar Agua, `entry-1` se auto-valido en `Entrada` como `Nivel de agua registrado hoy`,
+- al registrar apertura de Caja, `entry-2` se auto-valido como `Registrar caja inicial`, y tras registrar cierre de Caja `exit-1` se auto-valido como `Cerrar caja`,
+- `Historial` siguio mostrando completados recientes y Salida expuso el CTA operativo correcto (`Registrar corte de caja`) antes de cerrar.
 
 Residual exacto para flippear a `DONE`:
 
-- falta smoke manual real del loop completo `agua -> caja -> checklist entrada -> checklist salida`, incluyendo apertura/cierre de caja y finalizacion efectiva de ambos checklists,
+- todavia falta completar efectivamente ambos checklists con sus pasos manuales, no solo la auto-validacion sistemica,
+- el smoke dejo un residual operativo real: Salida puede empezar y auto-validar `exit-1` aunque Entrada siga incompleta; mientras no se decida si ese orden es correcto o debe bloquearse, Checklist sigue en `PARTIAL`,
 - el historial sigue en modo minimo; filtros/stats quedan fuera de G1 pero aun no tienen smoke manual que cierre parity operacional completa.
 
 ### G1.5 Encargos nuevo

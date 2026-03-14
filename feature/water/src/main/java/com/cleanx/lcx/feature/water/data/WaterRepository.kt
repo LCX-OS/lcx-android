@@ -5,6 +5,10 @@ import com.cleanx.lcx.core.network.SupabaseTableClient
 import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -15,6 +19,9 @@ const val DEFAULT_WATER_LEVEL_PERCENTAGE = 75
 
 private const val DEFAULT_WATER_ACTION = "Nivel inicial"
 private const val RECORDED_WATER_ACTION = "Nivel registrado"
+private const val AUDIT_LOG_TABLE = "audit_logs"
+private const val WATER_ALERTS_TABLE = "water_alerts"
+private const val PUSH_NOTIFICATION_ACTION = "push_notification"
 
 /**
  * Extended model for water_levels rows joined with profiles.
@@ -59,6 +66,15 @@ data class WaterLevelInsert(
     @SerialName("provider_name") val providerName: String? = null,
     @SerialName("recorded_by") val recordedBy: String? = null,
     val branch: String? = null,
+)
+
+@Serializable
+internal data class WaterAlertAuditLogInsert(
+    @SerialName("table_name") val tableName: String,
+    @SerialName("record_id") val recordId: String,
+    val action: String,
+    @SerialName("changed_data") val changedData: JsonObject,
+    @SerialName("performed_by") val performedBy: String? = null,
 )
 
 @Singleton
@@ -135,7 +151,17 @@ class WaterRepository @Inject constructor(
             branch = branch,
             notes = notes,
         )
-        return supabase.insert(table, insert)
+        val result = supabase.insert(table, insert)
+        if (result.isSuccess) {
+            logWaterAlertNotification(
+                levelPercentage = insert.levelPercentage,
+                liters = insert.liters,
+                status = insert.status,
+                branch = insert.branch,
+                performedBy = insert.recordedBy,
+            )
+        }
+        return result
     }
 
     /**
@@ -158,7 +184,46 @@ class WaterRepository @Inject constructor(
             recordedBy = recordedBy,
             branch = branch,
         )
-        return supabase.insert(table, insert)
+        val result = supabase.insert(table, insert)
+        if (result.isSuccess) {
+            logWaterAlertNotification(
+                levelPercentage = insert.levelPercentage,
+                liters = insert.liters,
+                status = insert.status,
+                branch = insert.branch,
+                performedBy = insert.recordedBy,
+            )
+        }
+        return result
+    }
+
+    private suspend fun logWaterAlertNotification(
+        levelPercentage: Int,
+        liters: Int,
+        status: WaterLevelStatus,
+        branch: String?,
+        performedBy: String?,
+    ) {
+        val auditLog = buildWaterAlertAuditLog(
+            levelPercentage = levelPercentage,
+            liters = liters,
+            status = status,
+            branch = branch,
+            performedBy = performedBy,
+            recordId = System.currentTimeMillis().toString(),
+        ) ?: return
+
+        supabase.insert(AUDIT_LOG_TABLE, auditLog)
+            .onSuccess {
+                Timber.d(
+                    "Recorded water alert audit log: status=%s, level=%d%%",
+                    status,
+                    levelPercentage,
+                )
+            }
+            .onFailure { error ->
+                Timber.w(error, "Failed to record water alert audit log")
+            }
     }
 
     companion object {
@@ -218,5 +283,31 @@ internal fun buildWaterOrderInsert(
         providerName = provider.name,
         recordedBy = recordedBy,
         branch = branch,
+    )
+}
+
+internal fun buildWaterAlertAuditLog(
+    levelPercentage: Int,
+    liters: Int,
+    status: WaterLevelStatus,
+    branch: String?,
+    performedBy: String?,
+    recordId: String,
+): WaterAlertAuditLogInsert? {
+    if (status != WaterLevelStatus.CRITICAL && status != WaterLevelStatus.LOW) {
+        return null
+    }
+
+    return WaterAlertAuditLogInsert(
+        tableName = WATER_ALERTS_TABLE,
+        recordId = recordId,
+        action = PUSH_NOTIFICATION_ACTION,
+        changedData = buildJsonObject {
+            put("status", JsonPrimitive(status.name.lowercase()))
+            put("level_percentage", JsonPrimitive(levelPercentage))
+            put("liters", JsonPrimitive(liters))
+            put("branch", branch?.let(::JsonPrimitive) ?: JsonNull)
+        },
+        performedBy = performedBy,
     )
 }
