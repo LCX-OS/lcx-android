@@ -61,13 +61,43 @@ val devUseRealBrother = readBooleanConfig(
     envName = "LCX_DEV_USE_REAL_BROTHER",
     defaultValue = false,
 )
+val androidApplicationId = readConfig(
+    propertyName = "LCX_ANDROID_APPLICATION_ID",
+    envName = "LCX_ANDROID_APPLICATION_ID",
+    defaultValue = "com.cleanx.lcx",
+)
+val devApplicationIdSuffix = readConfig(
+    propertyName = "LCX_DEV_APPLICATION_ID_SUFFIX",
+    envName = "LCX_DEV_APPLICATION_ID_SUFFIX",
+    defaultValue = ".dev",
+)
+val stagingApplicationIdSuffix = readConfig(
+    propertyName = "LCX_STAGING_APPLICATION_ID_SUFFIX",
+    envName = "LCX_STAGING_APPLICATION_ID_SUFFIX",
+    defaultValue = ".staging",
+)
+val zettleClientId = readConfig(
+    propertyName = "LCX_ZETTLE_CLIENT_ID",
+    envName = "LCX_ZETTLE_CLIENT_ID",
+    defaultValue = "ac819c6c-482d-411b-bada-43fccd2010bb",
+)
+val zettleRedirectUrl = readConfig(
+    propertyName = "LCX_ZETTLE_REDIRECT_URL",
+    envName = "LCX_ZETTLE_REDIRECT_URL",
+    defaultValue = "com.cleanx.app://oauth/callback",
+)
+val zettleApprovedApplicationId = readConfig(
+    propertyName = "LCX_ZETTLE_APPROVED_APPLICATION_ID",
+    envName = "LCX_ZETTLE_APPROVED_APPLICATION_ID",
+    defaultValue = "com.cleanx.app",
+)
 
 android {
     namespace = "com.cleanx.lcx"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.cleanx.lcx"
+        applicationId = androidApplicationId
         minSdk = 33
         targetSdk = 36
         versionCode = 1
@@ -79,13 +109,20 @@ android {
         buildConfigField("String", "NOTIFICATIONS_BASE_URL", "\"http://10.0.2.2:8080\"")
         buildConfigField("String", "SUPABASE_URL", "\"https://placeholder.supabase.co\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"placeholder-anon-key\"")
+        buildConfigField("String", "ZETTLE_CLIENT_ID", zettleClientId.toBuildConfigString())
+        buildConfigField("String", "ZETTLE_REDIRECT_URL", zettleRedirectUrl.toBuildConfigString())
+        buildConfigField(
+            "String",
+            "ZETTLE_APPROVED_APPLICATION_ID",
+            zettleApprovedApplicationId.toBuildConfigString(),
+        )
     }
 
     flavorDimensions += "environment"
     productFlavors {
         create("dev") {
             dimension = "environment"
-            applicationIdSuffix = ".dev"
+            applicationIdSuffix = devApplicationIdSuffix
             versionNameSuffix = "-dev"
             buildConfigField("String", "API_BASE_URL", devApiBaseUrl.toBuildConfigString())
             buildConfigField("String", "NOTIFICATIONS_BASE_URL", devNotificationsBaseUrl.toBuildConfigString())
@@ -96,7 +133,7 @@ android {
         }
         create("staging") {
             dimension = "environment"
-            applicationIdSuffix = ".staging"
+            applicationIdSuffix = stagingApplicationIdSuffix
             versionNameSuffix = "-staging"
             buildConfigField("String", "API_BASE_URL", "\"https://staging.lcx.example.com\"")
             buildConfigField("String", "NOTIFICATIONS_BASE_URL", "\"https://staging.lcx.example.com\"")

@@ -13,10 +13,24 @@ import org.junit.Test
 class FeatureFlagPaymentSwitchTest {
 
     private val stubPaymentManager = StubPaymentManager()
-    private val unavailableZettlePaymentManager = UnavailableZettlePaymentManager()
+    private val unavailableZettlePaymentManager = UnavailableZettlePaymentManager(buildConfig())
 
     private fun flagsWith(useRealZettle: Boolean) = object : FeatureFlags {
         override val useRealZettle: Boolean = useRealZettle
+        override val useRealBrother: Boolean = false
+    }
+
+    private fun buildConfig() = object : com.cleanx.lcx.core.config.BuildConfigProvider {
+        override val applicationId: String = "com.cleanx.app"
+        override val apiBaseUrl: String = "http://localhost"
+        override val notificationsBaseUrl: String = "http://localhost"
+        override val supabaseUrl: String = "http://localhost"
+        override val supabaseAnonKey: String = "anon"
+        override val zettleClientId: String = "client-id"
+        override val zettleRedirectUrl: String = "com.cleanx.app://oauth/callback"
+        override val zettleApprovedApplicationId: String = "com.cleanx.app"
+        override val isDebug: Boolean = true
+        override val useRealZettle: Boolean = true
         override val useRealBrother: Boolean = false
     }
 

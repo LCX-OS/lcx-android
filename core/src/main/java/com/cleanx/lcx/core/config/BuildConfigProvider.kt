@@ -7,10 +7,14 @@ package com.cleanx.lcx.core.config
  * Implemented in :app and bound via Hilt.
  */
 interface BuildConfigProvider {
+    val applicationId: String
     val apiBaseUrl: String
     val notificationsBaseUrl: String
     val supabaseUrl: String
     val supabaseAnonKey: String
+    val zettleClientId: String
+    val zettleRedirectUrl: String
+    val zettleApprovedApplicationId: String
     val isDebug: Boolean
     val useRealZettle: Boolean
     val useRealBrother: Boolean
