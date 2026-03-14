@@ -34,7 +34,7 @@ class SalesCheckoutUseCaseTest {
     @Test
     fun `cash checkout creates venta batch without card charge`() = runTest {
         every { paymentManager.capability() } returns unavailableCapability()
-        coEvery { ticketRepository.createTickets(any(), any()) } returns ApiResult.Success(
+        coEvery { ticketRepository.createTickets(any(), any(), any()) } returns ApiResult.Success(
             listOf(ticket()),
         )
 
@@ -44,7 +44,7 @@ class SalesCheckoutUseCaseTest {
         )
 
         assertTrue(result is SalesCheckoutResult.Success)
-        coVerify(exactly = 1) { ticketRepository.createTickets("venta", any()) }
+        coVerify(exactly = 1) { ticketRepository.createTickets("venta", any(), false) }
         coVerify(exactly = 0) { paymentManager.requestPayment(any(), any()) }
     }
 
@@ -56,7 +56,7 @@ class SalesCheckoutUseCaseTest {
             amount = 74.0,
             reference = "venta-ref",
         )
-        coEvery { ticketRepository.createTickets(any(), any()) } returns ApiResult.Success(
+        coEvery { ticketRepository.createTickets(any(), any(), any()) } returns ApiResult.Success(
             listOf(ticket()),
         )
 
@@ -68,7 +68,7 @@ class SalesCheckoutUseCaseTest {
         assertTrue(result is SalesCheckoutResult.Success)
         assertEquals("txn-123", (result as SalesCheckoutResult.Success).transactionId)
         coVerify(exactly = 1) { paymentManager.requestPayment(74.0, any()) }
-        coVerify(exactly = 1) { ticketRepository.createTickets("venta", any()) }
+        coVerify(exactly = 1) { ticketRepository.createTickets("venta", any(), true) }
     }
 
     @Test
@@ -79,7 +79,7 @@ class SalesCheckoutUseCaseTest {
             amount = 74.0,
             reference = "venta-ref",
         )
-        coEvery { ticketRepository.createTickets(any(), any()) } returns ApiResult.Error(
+        coEvery { ticketRepository.createTickets(any(), any(), any()) } returns ApiResult.Error(
             code = "OPENING_CHECKLIST_BLOCKING_OPERATION",
             message = "Opening checklist must be completed before creating tickets",
             httpStatus = 409,
@@ -99,6 +99,7 @@ class SalesCheckoutUseCaseTest {
             "Debes completar el checklist de apertura antes de crear tickets.",
             failure.message,
         )
+        coVerify(exactly = 1) { ticketRepository.createTickets("venta", any(), true) }
     }
 
     @Test
@@ -118,7 +119,7 @@ class SalesCheckoutUseCaseTest {
             (result as SalesCheckoutResult.PaymentFailed).message,
         )
         coVerify(exactly = 0) { paymentManager.requestPayment(any(), any()) }
-        coVerify(exactly = 0) { ticketRepository.createTickets(any(), any()) }
+        coVerify(exactly = 0) { ticketRepository.createTickets(any(), any(), any()) }
     }
 
     private fun checkoutRequest(paymentMethod: PaymentMethod): SalesCheckoutRequest {

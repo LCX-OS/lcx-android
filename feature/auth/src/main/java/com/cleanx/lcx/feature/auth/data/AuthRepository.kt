@@ -103,7 +103,7 @@ class AuthRepository @Inject constructor(
             return false
         }
 
-        if (tokenIssuerHost != null && tokenIssuerHost != configuredHost) {
+        if (tokenIssuerHost != null && !hostsMatchOrEquivalent(tokenIssuerHost, configuredHost)) {
             Timber.tag("AUTH").w(
                 "Token issuer mismatch; tokenHost=%s configuredHost=%s. Forcing re-login.",
                 tokenIssuerHost,
@@ -140,6 +140,21 @@ class AuthRepository @Inject constructor(
             Timber.w(e, "Auth: failed to fetch user role, defaulting to EMPLOYEE")
             sessionManager.saveUserRole(UserRole.EMPLOYEE)
         }
+    }
+}
+
+private fun hostsMatchOrEquivalent(left: String, right: String): Boolean {
+    return canonicalHost(left) == canonicalHost(right)
+}
+
+private fun canonicalHost(host: String): String {
+    return when (host.lowercase()) {
+        "127.0.0.1",
+        "localhost",
+        "10.0.2.2",
+        "::1",
+        "[::1]" -> "loopback"
+        else -> host.lowercase()
     }
 }
 

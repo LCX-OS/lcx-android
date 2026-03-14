@@ -27,6 +27,7 @@ fun StatusChip(status: TicketStatus) {
         TicketStatus.PROCESSING -> "En proceso" to LcxStatusProcessing
         TicketStatus.READY -> "Listo" to LcxStatusReady
         TicketStatus.DELIVERED -> "Entregado" to LcxStatusDelivered
+        TicketStatus.PAID -> "Pagado" to LcxStatusDelivered
     }
 
     Box(

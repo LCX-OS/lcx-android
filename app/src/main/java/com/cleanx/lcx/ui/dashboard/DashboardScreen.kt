@@ -604,5 +604,6 @@ private fun ticketStatusLabel(status: TicketStatus): String {
         TicketStatus.PROCESSING -> "En proceso"
         TicketStatus.READY -> "Listo"
         TicketStatus.DELIVERED -> "Entregado"
+        TicketStatus.PAID -> "Pagado"
     }
 }

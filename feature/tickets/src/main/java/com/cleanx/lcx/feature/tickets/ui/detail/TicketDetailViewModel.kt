@@ -106,6 +106,7 @@ class TicketDetailViewModel @Inject constructor(
             TicketStatus.PROCESSING -> TicketStatus.READY
             TicketStatus.READY -> TicketStatus.DELIVERED
             TicketStatus.DELIVERED -> return // Already at final status
+            TicketStatus.PAID -> return // Legacy read-only status
         }
 
         viewModelScope.launch {

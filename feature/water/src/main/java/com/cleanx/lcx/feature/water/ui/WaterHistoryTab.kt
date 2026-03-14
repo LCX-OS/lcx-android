@@ -151,7 +151,10 @@ private fun HistoryItem(record: WaterLevelWithUser) {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = "${record.levelPercentage}% - %,d L".format(record.liters ?: 0),
+                        text = formatLevelSummary(
+                            levelPercentage = record.levelPercentage,
+                            liters = record.liters,
+                        ),
                         style = MaterialTheme.typography.bodyMedium,
                     )
 
@@ -161,6 +164,12 @@ private fun HistoryItem(record: WaterLevelWithUser) {
             }
         }
     }
+}
+
+internal fun formatLevelSummary(levelPercentage: Int?, liters: Int?): String {
+    val safePercentage = levelPercentage ?: 0
+    val safeLiters = liters ?: 0
+    return "$safePercentage% - ${"%,d".format(safeLiters)} L"
 }
 
 @Composable

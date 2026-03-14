@@ -74,7 +74,9 @@ fun TicketPresetScreen(
                 it.status == TicketStatus.RECEIVED || it.status == TicketStatus.PROCESSING
             }
             "ready" -> state.tickets.filter { it.status == TicketStatus.READY }
-            "completed" -> state.tickets.filter { it.status == TicketStatus.DELIVERED }
+            "completed" -> state.tickets.filter {
+                it.status == TicketStatus.DELIVERED || it.status == TicketStatus.PAID
+            }
             "all" -> state.tickets
             else -> state.tickets
         }

@@ -77,7 +77,10 @@ fun TicketListScreen(
             TicketPresetShortcut(
                 preset = "completed",
                 label = "Entregados",
-                count = state.tickets.count { it.status == com.cleanx.lcx.core.model.TicketStatus.DELIVERED },
+                count = state.tickets.count {
+                    it.status == com.cleanx.lcx.core.model.TicketStatus.DELIVERED ||
+                        it.status == com.cleanx.lcx.core.model.TicketStatus.PAID
+                },
             ),
             TicketPresetShortcut(
                 preset = "all",

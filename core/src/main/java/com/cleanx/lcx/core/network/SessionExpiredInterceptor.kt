@@ -27,21 +27,40 @@ class SessionExpiredInterceptor @Inject constructor() : Interceptor {
     val sessionExpired: SharedFlow<Unit> = _sessionExpired.asSharedFlow()
 
     override fun intercept(chain: Interceptor.Chain): Response {
-        val response = chain.proceed(chain.request())
+        val originalRequest = chain.request()
+        val suppressSessionExpired = originalRequest.header(SUPPRESS_SESSION_EXPIRED_HEADER)
+            ?.equals(SUPPRESS_SESSION_EXPIRED_VALUE, ignoreCase = true) == true
+        val request = if (suppressSessionExpired) {
+            originalRequest.newBuilder()
+                .removeHeader(SUPPRESS_SESSION_EXPIRED_HEADER)
+                .build()
+        } else {
+            originalRequest
+        }
 
-        if (response.code == HTTP_UNAUTHORIZED) {
+        val response = chain.proceed(request)
+
+        if (response.code == HTTP_UNAUTHORIZED && !suppressSessionExpired) {
             Timber.tag("AUTH").w(
                 "401 detected on %s %s — emitting session-expired event",
-                chain.request().method,
-                chain.request().url.encodedPath,
+                request.method,
+                request.url.encodedPath,
             )
             _sessionExpired.tryEmit(Unit)
+        } else if (response.code == HTTP_UNAUTHORIZED) {
+            Timber.tag("AUTH").w(
+                "401 detected on %s %s — session-expired suppressed for local handling",
+                request.method,
+                request.url.encodedPath,
+            )
         }
 
         return response
     }
 
-    private companion object {
+    companion object {
         const val HTTP_UNAUTHORIZED = 401
+        const val SUPPRESS_SESSION_EXPIRED_HEADER = "X-LCX-Suppress-Session-Expired"
+        const val SUPPRESS_SESSION_EXPIRED_VALUE = "true"
     }
 }

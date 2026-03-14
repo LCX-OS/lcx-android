@@ -33,4 +33,27 @@ class TicketSerializationTest {
         assertEquals(0.0, ticket.paidAmount, 0.001)
         assertNull(ticket.paymentMethod)
     }
+
+    @Test
+    fun `deserialize ticket with legacy paid status`() {
+        val raw = """
+        {
+            "id": "paid-123",
+            "ticket_number": "T-20260313-0044",
+            "ticket_date": "2026-03-13",
+            "daily_folio": 44,
+            "customer_name": "Cliente legado",
+            "service_type": "in-store",
+            "status": "paid",
+            "payment_status": "paid",
+            "paid_amount": 120
+        }
+        """.trimIndent()
+
+        val ticket = json.decodeFromString(Ticket.serializer(), raw)
+
+        assertEquals(TicketStatus.PAID, ticket.status)
+        assertEquals(PaymentStatus.PAID, ticket.paymentStatus)
+        assertEquals(120.0, ticket.paidAmount, 0.001)
+    }
 }

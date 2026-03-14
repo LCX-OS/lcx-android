@@ -6,6 +6,7 @@ import com.cleanx.lcx.core.model.ServiceType
 import com.cleanx.lcx.core.model.Ticket
 import com.cleanx.lcx.core.model.TicketStatus
 import com.cleanx.lcx.core.network.CreateTicketsRequest
+import com.cleanx.lcx.core.network.SessionExpiredInterceptor
 import com.cleanx.lcx.core.network.SmsNotificationClient
 import com.cleanx.lcx.core.network.SmsNotificationResult
 import com.cleanx.lcx.core.network.SmsSendResponseData
@@ -101,7 +102,7 @@ class TicketRepositoryTest {
             totalAmount = 250.0,
         )
 
-        coEvery { api.createTickets(any()) } returns Response.success(
+        coEvery { api.createTickets(any(), any()) } returns Response.success(
             TicketsResponse(data = listOf(sampleTicket)),
         )
 
@@ -136,9 +137,11 @@ class TicketRepositoryTest {
         )
 
         val requestSlot = slot<CreateTicketsRequest>()
-        coEvery { api.createTickets(capture(requestSlot)) } returns Response.success(
-            TicketsResponse(data = listOf(sampleTicket)),
-        )
+        val suppressHeaders = mutableListOf<String?>()
+        coEvery { api.createTickets(capture(requestSlot), any()) } answers {
+            suppressHeaders += args[1] as String?
+            Response.success(TicketsResponse(data = listOf(sampleTicket)))
+        }
 
         repository.createTickets(source = "venta", tickets = listOf(draft))
 
@@ -157,6 +160,36 @@ class TicketRepositoryTest {
         assertEquals("transfer", captured.tickets[0].paymentMethod)
         assertEquals(50.0, captured.tickets[0].paidAmount)
         assertEquals(50.0, captured.tickets[0].prepaidAmount)
+        assertEquals(listOf(null), suppressHeaders)
+    }
+
+    @Test
+    fun `createTickets can suppress session-expired handling for critical flows`() = runTest {
+        val requestSlot = slot<CreateTicketsRequest>()
+        val suppressHeaders = mutableListOf<String?>()
+        coEvery { api.createTickets(capture(requestSlot), any()) } answers {
+            suppressHeaders += args[1] as String?
+            Response.success(TicketsResponse(data = listOf(sampleTicket)))
+        }
+
+        repository.createTickets(
+            source = "venta",
+            tickets = listOf(
+                TicketDraft(
+                    customerName = "Cliente QA",
+                    customerPhone = "5551234567",
+                    serviceType = "in-store",
+                    service = "Venta Productos",
+                ),
+            ),
+            suppressSessionExpiredOnUnauthorized = true,
+        )
+
+        assertEquals("venta", requestSlot.captured.source)
+        assertEquals(
+            listOf(SessionExpiredInterceptor.SUPPRESS_SESSION_EXPIRED_VALUE),
+            suppressHeaders,
+        )
     }
 
     @Test
@@ -164,7 +197,7 @@ class TicketRepositoryTest {
         val errorJson = """{"error":"Opening checklist must be completed","code":"OPENING_CHECKLIST_BLOCKING_OPERATION","details":"Complete it first"}"""
         val errorBody = errorJson.toResponseBody("application/json".toMediaType())
 
-        coEvery { api.createTickets(any()) } returns Response.error(409, errorBody)
+        coEvery { api.createTickets(any(), any()) } returns Response.error(409, errorBody)
 
         val result = repository.createTickets(
             source = "encargo",
@@ -190,7 +223,7 @@ class TicketRepositoryTest {
     fun `createTickets error with unparseable body returns fallback message`() = runTest {
         val errorBody = "Internal Server Error".toResponseBody("text/plain".toMediaType())
 
-        coEvery { api.createTickets(any()) } returns Response.error(500, errorBody)
+        coEvery { api.createTickets(any(), any()) } returns Response.error(500, errorBody)
 
         val result = repository.createTickets(
             source = "encargo",
@@ -212,7 +245,7 @@ class TicketRepositoryTest {
 
     @Test
     fun `createTickets handles network exception`() = runTest {
-        coEvery { api.createTickets(any()) } throws java.io.IOException("Network unreachable")
+        coEvery { api.createTickets(any(), any()) } throws java.io.IOException("Network unreachable")
 
         val result = repository.createTickets(
             source = "encargo",
@@ -281,6 +314,17 @@ class TicketRepositoryTest {
 
         repository.updateStatus("id", TicketStatus.DELIVERED)
         assertEquals("delivered", requestSlot.captured.status)
+    }
+
+    @Test
+    fun `updateStatus rejects legacy paid status locally`() = runTest {
+        val result = repository.updateStatus("legacy-123", TicketStatus.PAID)
+
+        assertTrue(result is ApiResult.Error)
+        val error = result as ApiResult.Error
+        assertEquals("LEGACY_STATUS_READ_ONLY", error.code)
+        assertEquals(422, error.httpStatus)
+        coVerify(exactly = 0) { api.updateStatus(any(), any()) }
     }
 
     @Test

@@ -272,12 +272,13 @@ fun TicketDetailScreen(
 
                     HorizontalDivider()
 
-                    if (ticket.status != TicketStatus.DELIVERED) {
+                    if (ticket.status != TicketStatus.DELIVERED && ticket.status != TicketStatus.PAID) {
                         val nextLabel = when (ticket.status) {
                             TicketStatus.RECEIVED -> "Marcar En Proceso"
                             TicketStatus.PROCESSING -> "Marcar Listo"
                             TicketStatus.READY -> "Marcar Entregado"
                             TicketStatus.DELIVERED -> ""
+                            TicketStatus.PAID -> ""
                         }
                         LcxButton(
                             text = nextLabel,
@@ -434,7 +435,7 @@ private fun QuickActionBar(
     onAdvanceStatus: () -> Unit,
     onCharge: () -> Unit,
 ) {
-    val canAdvance = ticket.status != TicketStatus.DELIVERED
+    val canAdvance = ticket.status != TicketStatus.DELIVERED && ticket.status != TicketStatus.PAID
     val canCharge = ticket.paymentStatus != PaymentStatus.PAID
     val showBar = canAdvance || canCharge
 
@@ -455,6 +456,7 @@ private fun QuickActionBar(
                     TicketStatus.PROCESSING -> "Marcar Listo"
                     TicketStatus.READY -> "Entregar"
                     TicketStatus.DELIVERED -> ""
+                    TicketStatus.PAID -> ""
                 }
                 LcxButton(
                     text = label,

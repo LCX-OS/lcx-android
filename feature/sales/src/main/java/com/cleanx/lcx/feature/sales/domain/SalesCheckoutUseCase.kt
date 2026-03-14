@@ -140,6 +140,7 @@ class SalesCheckoutUseCase @Inject constructor(
             ticketRepository.createTickets(
                 source = "venta",
                 tickets = drafts,
+                suppressSessionExpiredOnUnauthorized = transactionId != null,
             )
         }
 

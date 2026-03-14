@@ -6,6 +6,7 @@ import com.cleanx.lcx.core.model.Ticket
 import com.cleanx.lcx.core.model.TicketStatus
 import com.cleanx.lcx.core.network.ApiError
 import com.cleanx.lcx.core.network.CreateTicketsRequest
+import com.cleanx.lcx.core.network.SessionExpiredInterceptor
 import com.cleanx.lcx.core.network.SmsNotificationClient
 import com.cleanx.lcx.core.network.SmsNotificationResult
 import com.cleanx.lcx.core.network.SupabaseError
@@ -70,6 +71,7 @@ class TicketRepository @Inject constructor(
     suspend fun createTickets(
         source: String,
         tickets: List<TicketDraft>,
+        suppressSessionExpiredOnUnauthorized: Boolean = false,
     ): ApiResult<List<Ticket>> {
         Timber.tag("TICKET").d("Creating %d tickets (source=%s)", tickets.size, source)
         return try {
@@ -78,6 +80,11 @@ class TicketRepository @Inject constructor(
                     source = source,
                     tickets = tickets,
                 ),
+                suppressSessionExpired = if (suppressSessionExpiredOnUnauthorized) {
+                    SessionExpiredInterceptor.SUPPRESS_SESSION_EXPIRED_VALUE
+                } else {
+                    null
+                },
             )
             if (response.isSuccessful) {
                 val data = response.body()?.data
@@ -105,11 +112,19 @@ class TicketRepository @Inject constructor(
         status: TicketStatus,
     ): ApiResult<Ticket> {
         Timber.tag("TICKET").d("Updating status: ticketId=%s, status=%s", ticketId, status)
+        if (status == TicketStatus.PAID) {
+            return ApiResult.Error(
+                code = "LEGACY_STATUS_READ_ONLY",
+                message = "El estado pagado es legado y solo lectura.",
+                httpStatus = 422,
+            )
+        }
         val statusValue = when (status) {
             TicketStatus.RECEIVED -> "received"
             TicketStatus.PROCESSING -> "processing"
             TicketStatus.READY -> "ready"
             TicketStatus.DELIVERED -> "delivered"
+            TicketStatus.PAID -> error("Legacy paid status must not be written")
         }
         return try {
             val response = api.updateStatus(

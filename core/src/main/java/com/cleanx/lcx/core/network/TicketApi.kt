@@ -5,6 +5,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.Header
 import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Path
@@ -66,7 +67,11 @@ data class ApiError(
 
 interface TicketApi {
     @POST("api/tickets")
-    suspend fun createTickets(@Body request: CreateTicketsRequest): Response<TicketsResponse>
+    suspend fun createTickets(
+        @Body request: CreateTicketsRequest,
+        @Header(SessionExpiredInterceptor.SUPPRESS_SESSION_EXPIRED_HEADER)
+        suppressSessionExpired: String? = null,
+    ): Response<TicketsResponse>
 
     @PATCH("api/tickets/{id}/status")
     suspend fun updateStatus(

@@ -11,6 +11,12 @@ class EnumsTest {
     fun `TicketStatus serializes to snake_case`() {
         assertEquals("\"received\"", json.encodeToString(TicketStatus.serializer(), TicketStatus.RECEIVED))
         assertEquals("\"processing\"", json.encodeToString(TicketStatus.serializer(), TicketStatus.PROCESSING))
+        assertEquals("\"paid\"", json.encodeToString(TicketStatus.serializer(), TicketStatus.PAID))
+    }
+
+    @Test
+    fun `TicketStatus deserializes legacy paid status`() {
+        assertEquals(TicketStatus.PAID, json.decodeFromString(TicketStatus.serializer(), "\"paid\""))
     }
 
     @Test

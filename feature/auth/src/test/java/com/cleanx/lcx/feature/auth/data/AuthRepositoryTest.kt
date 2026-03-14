@@ -141,7 +141,7 @@ class AuthRepositoryTest {
 
     @Test
     fun `isAuthenticated returns false when JWT issuer host mismatches configured supabase host`() {
-        val mismatchedToken = buildJwtWithIssuer("http://127.0.0.1:54321/auth/v1")
+        val mismatchedToken = buildJwtWithIssuer("https://evil.example.com/auth/v1")
         every { sessionManager.getAccessToken() } returns mismatchedToken
 
         assertFalse(repository.isAuthenticated())
@@ -151,6 +151,16 @@ class AuthRepositoryTest {
     fun `isAuthenticated returns true when JWT issuer host matches configured supabase host`() {
         val matchingToken = buildJwtWithIssuer("https://olheihdjfhzgrdpmylvh.supabase.co/auth/v1")
         every { sessionManager.getAccessToken() } returns matchingToken
+
+        assertTrue(repository.isAuthenticated())
+    }
+
+    @Test
+    fun `isAuthenticated accepts loopback issuer aliases for local supabase`() {
+        every { config.supabaseUrl } returns "http://10.0.2.2:54321"
+        repository = AuthRepository(authApi, sessionManager, supabaseClient, config, json)
+        val loopbackToken = buildJwtWithIssuer("http://127.0.0.1:54321/auth/v1")
+        every { sessionManager.getAccessToken() } returns loopbackToken
 
         assertTrue(repository.isAuthenticated())
     }

@@ -15,6 +15,7 @@ enum class TicketStatus {
     @SerialName("processing") PROCESSING,
     @SerialName("ready") READY,
     @SerialName("delivered") DELIVERED,
+    @SerialName("paid") PAID,
 }
 
 @Serializable

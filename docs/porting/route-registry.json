@@ -74,7 +74,7 @@
       "public": false,
       "route_present": true,
       "parity_done": false,
-      "notes": "native dashboard now replaces the placeholder with real quick actions, routine status, pending tickets, and low-stock supply cards; parity stays false until a manual post-login smoke is run with a valid operator QA session"
+      "notes": "native dashboard now replaces the placeholder with real quick actions, routine status, pending tickets, and low-stock supply cards; manual post-login smoke already validated quick actions plus the routine card with a live employee session, including the water status flip to OK after saving a level, but parity stays false until the lower pending cards and non-employee role variants are explicitly rechecked"
     },
     {
       "id": "op-agua",
@@ -85,7 +85,7 @@
       "public": false,
       "route_present": true,
       "parity_done": false,
-      "notes": "feature wired to Screen.Water; current scope resolves branch from the signed-in profile, persists recorded_by/branch on writes, and now mirrors the PWA default empty-state snapshot with 75%/optimal when the branch has no prior water records; parity stays false until a manual post-login smoke validates save level + order water + history refresh with a valid operator QA session"
+      "notes": "feature wired to Screen.Water; current scope resolves branch from the signed-in profile, persists recorded_by/branch on writes, mirrors the PWA default empty-state snapshot with 75%/optimal when the branch has no prior water records, and now has real post-login smoke for current level + save + history refresh with a live operator session; parity stays false because the order-water provider path still lacks manual validation"
     },
     {
       "id": "op-caja-registrar",
@@ -118,7 +118,7 @@
       "public": false,
       "route_present": true,
       "parity_done": false,
-      "notes": "mapped to consolidated Checklist screen/tab; Entrada/Salida/Historial live as tabs and use the real feature module, entry system items re-sync on resume/manual verify against water_levels + cash_movements, and completion is revalidated against persisted required items before closing; manual smoke is still blocked in the current workspace because the emulator reaches Login but there is no valid operator QA session to authenticate"
+      "notes": "mapped to consolidated Checklist screen/tab; Entrada/Salida/Historial live as tabs and use the real feature module, entry system items re-sync on resume/manual verify against water_levels + cash_movements, and completion is revalidated against persisted required items before closing; manual post-login smoke already opened Entrada and confirmed entry water auto-validation after saving Agua, but parity stays false until the full agua+caja+entrada+salida completion loop is executed"
     },
     {
       "id": "op-checklist-salida",
@@ -129,7 +129,7 @@
       "public": false,
       "route_present": true,
       "parity_done": false,
-      "notes": "mapped to consolidated Checklist screen/tab; Salida lives in the second tab, auto-validates closing cash from cash_movements, re-syncs on resume/manual verify, and blocks completion if persisted required items are still incomplete; manual smoke is still blocked in the current workspace because the emulator reaches Login but there is no valid operator QA session to authenticate"
+      "notes": "mapped to consolidated Checklist screen/tab; Salida lives in the second tab, auto-validates closing cash from cash_movements, re-syncs on resume/manual verify, and blocks completion if persisted required items are still incomplete; manual post-login smoke already opened the Salida tab, but parity stays false until caja apertura/cierre plus final completion are exercised end-to-end"
     },
     {
       "id": "op-checklist-historial",
@@ -140,7 +140,7 @@
       "public": false,
       "route_present": true,
       "parity_done": false,
-      "notes": "mapped to consolidated Checklist screen/tab; Historial lives in the third tab and keeps the minimum operator view of completed recent checklists; final parity smoke remains blocked until there is a valid operator QA session for post-login validation"
+      "notes": "mapped to consolidated Checklist screen/tab; Historial lives in the third tab and keeps the minimum operator view of completed recent checklists; manual post-login smoke already confirmed the history tab renders completed rows, but parity stays false until the live operational loop produces and verifies fresh completions"
     },
     {
       "id": "op-encargos-nuevo",
@@ -217,7 +217,7 @@
       "public": false,
       "route_present": true,
       "parity_done": false,
-      "notes": "native sales feature now loads live equipment/add-on/sellable inventory catalogs, supports customer search/create plus anonymous customer, builds mixed-cart source=venta batches with one ticket per equipment item plus a consolidated product ticket, and uses native payment selection (cash/transfer direct, card via terminal with explicit critical-recovery UX); the real Zettle Android SDK is now wired in code (GitHub Packages, OAuthActivity, SDK init, ActivityResult bridge) and devDebug was assembled locally with USE_REAL_ZETTLE=true plus approved app id alignment, but parity is still pending because manual operator smoke post-login and real terminal validation have not happened yet"
+      "notes": "native sales feature now loads live equipment/add-on/sellable inventory catalogs, supports customer search/create plus anonymous customer, builds mixed-cart source=venta batches with one ticket per equipment item plus a consolidated product ticket, and uses native payment selection (cash/transfer direct, card via terminal with explicit critical-recovery UX); manual post-login smoke already validated Payment Diagnostics on the real Zettle backend plus a mixed-cart anonymous card flow that reached the SDK and completed POST /api/tickets with 200 after the post-charge 401/logout bug was fixed, but parity stays false until reader hardware, cancel/failure flows, and final backend/UI reconciliation are exercised end-to-end"
     },
     {
       "id": "op-incidentes-nuevo",

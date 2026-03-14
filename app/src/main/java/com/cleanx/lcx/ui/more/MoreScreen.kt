@@ -35,6 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import com.cleanx.lcx.BuildConfig
 import com.cleanx.lcx.core.model.UserRole
 import com.cleanx.lcx.core.navigation.RouteAccess
 import com.cleanx.lcx.core.navigation.Screen
@@ -42,7 +43,7 @@ import com.cleanx.lcx.core.navigation.Screen
 /**
  * Data class representing a single navigable item within the More hub.
  */
-private data class MoreItem(
+internal data class MoreItem(
     val label: String,
     val icon: ImageVector,
     val screen: Screen,
@@ -51,7 +52,7 @@ private data class MoreItem(
 /**
  * Data class representing a section (group) of related items in the More hub.
  */
-private data class MoreSection(
+internal data class MoreSection(
     val title: String,
     val items: List<MoreItem>,
 )
@@ -59,66 +60,94 @@ private data class MoreSection(
 /**
  * Builds the ordered list of sections displayed in the More hub.
  */
-private fun buildSections(): List<MoreSection> = listOf(
-    MoreSection(
-        title = "Ventas",
-        items = listOf(
-            MoreItem("Ventas", Icons.Filled.PointOfSale, Screen.SalesGraph),
+internal fun buildSections(
+    includePaymentDiagnostics: Boolean = BuildConfig.DEBUG,
+): List<MoreSection> = buildList {
+    add(
+        MoreSection(
+            title = "Ventas",
+            items = listOf(
+                MoreItem("Ventas", Icons.Filled.PointOfSale, Screen.SalesGraph),
+            ),
         ),
-    ),
-    MoreSection(
-        title = "Incidencias",
-        items = listOf(
-            MoreItem("Nueva Incidencia", Icons.Filled.ReportProblem, Screen.IncidentsNew),
-            MoreItem("Historial de Incidencias", Icons.Filled.History, Screen.IncidentsHistory),
+    )
+    add(
+        MoreSection(
+            title = "Incidencias",
+            items = listOf(
+                MoreItem("Nueva Incidencia", Icons.Filled.ReportProblem, Screen.IncidentsNew),
+                MoreItem("Historial de Incidencias", Icons.Filled.History, Screen.IncidentsHistory),
+            ),
         ),
-    ),
-    MoreSection(
-        title = "Turnos",
-        items = listOf(
-            MoreItem("Control de Turnos", Icons.Filled.SwapHoriz, Screen.ShiftsControl),
-            MoreItem("Historial", Icons.Filled.History, Screen.ShiftsHistory),
-            MoreItem("Horarios", Icons.Filled.Schedule, Screen.ShiftsSchedule),
-            MoreItem("Reportes", Icons.Filled.Summarize, Screen.ShiftsReports),
+    )
+    add(
+        MoreSection(
+            title = "Turnos",
+            items = listOf(
+                MoreItem("Control de Turnos", Icons.Filled.SwapHoriz, Screen.ShiftsControl),
+                MoreItem("Historial", Icons.Filled.History, Screen.ShiftsHistory),
+                MoreItem("Horarios", Icons.Filled.Schedule, Screen.ShiftsSchedule),
+                MoreItem("Reportes", Icons.Filled.Summarize, Screen.ShiftsReports),
+            ),
         ),
-    ),
-    MoreSection(
-        title = "Ropa Dañada",
-        items = listOf(
-            MoreItem("Nuevo Reporte", Icons.Filled.NoteAdd, Screen.DamagedClothingNew),
-            MoreItem("Historial", Icons.Filled.History, Screen.DamagedClothingHistory),
+    )
+    add(
+        MoreSection(
+            title = "Ropa Dañada",
+            items = listOf(
+                MoreItem("Nuevo Reporte", Icons.Filled.NoteAdd, Screen.DamagedClothingNew),
+                MoreItem("Historial", Icons.Filled.History, Screen.DamagedClothingHistory),
+            ),
         ),
-    ),
-    MoreSection(
-        title = "Insumos",
-        items = listOf(
-            MoreItem("Inventario", Icons.Filled.Inventory, Screen.SuppliesInventory),
-            MoreItem("Etiquetas", Icons.Filled.Label, Screen.SuppliesLabels),
-            MoreItem("Reportes", Icons.Filled.Summarize, Screen.SuppliesReports),
-            MoreItem("Debug Brother", Icons.Filled.BugReport, Screen.SuppliesBrotherDebug),
+    )
+    add(
+        MoreSection(
+            title = "Insumos",
+            items = listOf(
+                MoreItem("Inventario", Icons.Filled.Inventory, Screen.SuppliesInventory),
+                MoreItem("Etiquetas", Icons.Filled.Label, Screen.SuppliesLabels),
+                MoreItem("Reportes", Icons.Filled.Summarize, Screen.SuppliesReports),
+                MoreItem("Debug Brother", Icons.Filled.BugReport, Screen.SuppliesBrotherDebug),
+            ),
         ),
-    ),
-    MoreSection(
-        title = "Vacaciones",
-        items = listOf(
-            MoreItem("Vacaciones", Icons.Filled.WbSunny, Screen.Vacations),
+    )
+    add(
+        MoreSection(
+            title = "Vacaciones",
+            items = listOf(
+                MoreItem("Vacaciones", Icons.Filled.WbSunny, Screen.Vacations),
+            ),
         ),
-    ),
-    MoreSection(
-        title = "Calendario",
-        items = listOf(
-            MoreItem("Vista Mensual", Icons.Filled.CalendarMonth, Screen.CalendarMonthly),
-            MoreItem("Eventos", Icons.Filled.EventNote, Screen.CalendarEvents),
+    )
+    add(
+        MoreSection(
+            title = "Calendario",
+            items = listOf(
+                MoreItem("Vista Mensual", Icons.Filled.CalendarMonth, Screen.CalendarMonthly),
+                MoreItem("Eventos", Icons.Filled.EventNote, Screen.CalendarEvents),
+            ),
         ),
-    ),
-    MoreSection(
-        title = "Información",
-        items = listOf(
-            MoreItem("Mejores Prácticas", Icons.Filled.CheckCircle, Screen.BestPractices),
-            MoreItem("Ayuda", Icons.AutoMirrored.Filled.Help, Screen.Help),
+    )
+    add(
+        MoreSection(
+            title = "Información",
+            items = listOf(
+                MoreItem("Mejores Prácticas", Icons.Filled.CheckCircle, Screen.BestPractices),
+                MoreItem("Ayuda", Icons.AutoMirrored.Filled.Help, Screen.Help),
+            ),
         ),
-    ),
-)
+    )
+    if (includePaymentDiagnostics) {
+        add(
+            MoreSection(
+                title = "Debug",
+                items = listOf(
+                    MoreItem("Diagnosticos de pagos", Icons.Filled.BugReport, Screen.PaymentDiagnostics),
+                ),
+            ),
+        )
+    }
+}
 
 /**
  * The More hub screen. Displays a scrollable list of operator module accesses

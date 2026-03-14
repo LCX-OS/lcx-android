@@ -144,12 +144,13 @@ Estado al 2026-03-13:
 
 - `Screen.Dashboard` ya no usa placeholder; monta un dashboard nativo con quick actions reales hacia Checklist, Agua, Caja y Nuevo encargo,
 - agrega rutina operativa con estado de checklist entrada/salida, agua y caja sobre datos reales del backend,
-- agrega pendientes operativos minimos con tickets abiertos y suministros bajos sin inventar metricas nuevas.
+- agrega pendientes operativos minimos con tickets abiertos y suministros bajos sin inventar metricas nuevas,
+- el smoke manual post-login ya confirmo quick actions reales y rutina operativa viva con una sesion `employee` del entorno; tras guardar Agua, el dashboard reflejo `Nivel de agua = OK`.
 
 Residual exacto para flippear a `DONE`:
 
-- falta smoke manual real del dashboard con una sesion de operador valida que confirme quick actions y tarjetas vivas con datos del entorno,
-- el emulador local ya compila, instala y abre Login, pero el workspace actual no incluye credenciales o fixture de QA para autenticarse y recorrer el flujo post-login.
+- falta validar de forma explicita las tarjetas inferiores de pendientes (tickets/suministros) y los role variants distintos a `employee` dentro del dashboard nativo,
+- mientras ese smoke no quede documentado, el gate se mantiene en `PARTIAL` aunque quick actions y rutina ya esten vivas post-login.
 
 ### G1.2 Agua
 
@@ -192,12 +193,13 @@ Estado al 2026-03-13:
 - `Screen.Water` ya monta la feature real con tabs de nivel actual + historial y CTA de pedir agua cuando el tanque cae a critico,
 - lecturas y escrituras siguen resolviendo `branch` y `recorded_by` desde el perfil autenticado,
 - el snapshot inicial ahora replica el comportamiento del PWA cuando no hay registros previos: Android arranca en `75% / optimal` en vez de caer en falso `0% / critical`,
-- la capa `feature/water:data` ya tiene tests puros para snapshot inicial e inserts (`recorded_by`, `branch`, action label y provider payload) y deja evidencia de que el contrato escrito sigue alineado con PWA.
+- la capa `feature/water:data` ya tiene tests puros para snapshot inicial e inserts (`recorded_by`, `branch`, action label y provider payload) y deja evidencia de que el contrato escrito sigue alineado con PWA,
+- el smoke manual real ya confirmo `Nivel Actual -> Guardar Nivel -> Historial` con sesion operativa: Android guardo `17% / 1,700 L`, mostro feedback `Nivel guardado correctamente`, refresco el historial in-place y el dashboard reflejo `Nivel de agua = OK`,
+- durante ese smoke se cerraron dos residuos reales de Android: `Historial` dejaba de renderizar por un `String.format` invalido y la carga de tickets podia romper por `status=\"paid\"` legado; ambos quedaron endurecidos en codigo y con tests.
 
 Residual exacto para flippear a `DONE`:
 
-- falta smoke manual real `save level -> order water -> refresh history` con una sesion de operador valida para confirmar el flujo completo en el entorno,
-- el bloqueo vigente sigue siendo de entorno, no de wiring base: el workspace actual no incluye credenciales o fixture de QA para autenticarse y ejecutar el loop post-login,
+- falta smoke manual real del subflujo `Pedir Agua` con proveedor del entorno para cerrar el loop completo `save level -> order water -> refresh history`,
 - selector explicito de sucursal para manager/superadmin, cache offline y audit log siguen fuera de G1 y no bloquean paridad operativa minima.
 
 ### G1.3 Caja
@@ -277,12 +279,12 @@ Estado al 2026-03-13:
 - la auto-validacion sigue el contrato PWA sobre `water_levels` + `cash_movements` (`entry-1`, `entry-2`, `exit-1`) y no depende de `cash_registers`,
 - al volver al foreground o tocar `Verificar`, Android vuelve a sincronizar los items sistemicos para no dejar estado viejo despues de pasar por Agua o Caja,
 - antes de completar un checklist, Android revalida en BD que todos los requeridos sigan completos para no cerrar con drift local o carrera de estado,
-- los checklists completados siguen en modo read-only y el historial nativo conserva el minimo operativo de completados recientes.
+- los checklists completados siguen en modo read-only y el historial nativo conserva el minimo operativo de completados recientes,
+- el smoke manual post-login ya confirmo que `Entrada`, `Salida` y `Historial` abren sin shell; despues de guardar Agua, `entry-1` se auto-valido en `Entrada` como `Nivel de agua registrado hoy`, y `Historial` siguio mostrando completados recientes.
 
 Residual exacto para flippear a `DONE`:
 
-- falta smoke manual real `agua -> caja -> checklist entrada -> checklist salida` para validar el loop completo con datos del entorno,
-- el bloqueo vigente no es de Android base: el emulador local ya compila, instala y abre Login, pero el workspace actual no incluye credenciales o fixture de QA para autenticarse y ejecutar el loop post-login,
+- falta smoke manual real del loop completo `agua -> caja -> checklist entrada -> checklist salida`, incluyendo apertura/cierre de caja y finalizacion efectiva de ambos checklists,
 - el historial sigue en modo minimo; filtros/stats quedan fuera de G1 pero aun no tienen smoke manual que cierre parity operacional completa.
 
 ### G1.5 Encargos nuevo
@@ -417,14 +419,16 @@ Estado al 2026-03-13:
 - si tarjeta cobra pero `POST /api/tickets` falla, la UI deja estado critico con `transactionId` y `correlationId` para conciliacion manual en vez de reintentar a ciegas y duplicar ventas,
 - el wiring de pagos ya no rompe por flavor cuando `USE_REAL_ZETTLE=true`: Android integra el SDK real de Zettle, registra `OAuthActivity`, inicializa el SDK al arrancar y lanza el flujo de cobro via `ActivityResult` desde `MainActivity`,
 - Android acepta config de Zettle por build (`clientId`, `redirectUrl`, `approved applicationId`) y diagnostica si el APK actual no coincide con el app aprobado por Zettle,
-- `devDebug` ya se pudo ensamblar localmente con `USE_REAL_ZETTLE=true`, `clientId`/`redirectUrl` reales y `applicationId` alineado a `com.cleanx.app` via config local fuera de git.
+- `devDebug` ya se pudo ensamblar localmente con `USE_REAL_ZETTLE=true`, `clientId`/`redirectUrl` reales y `applicationId` alineado a `com.cleanx.app` via config local fuera de git,
+- Login ya quedo operativo en esta maquina con una sesion local valida, `Payment Diagnostics` mostro backend real de Zettle y el SDK inicializado (`Zettle SDK initialized successfully` / no stub),
+- el smoke manual real de Ventas ya recorrio una venta mixta con cliente anonimo, un equipo + un item vendible, total `$101.90` y path tarjeta via SDK real; tras endurecer el request critico para no disparar logout global en `POST /api/tickets`, el cobro termino con `POST /api/tickets -> 200` y la UI regreso a Ventas con carrito limpio (`$0.00`).
 
 Residual exacto para flippear a `DONE`:
 
-- falta smoke manual en Android con una venta mixta real: cliente anonimo o seleccionado, equipo + producto, y validacion final de los tickets generados,
-- falta smoke manual especifico del path tarjeta para confirmar UX/operacion con la terminal disponible del entorno,
+- falta validacion con hardware real del lector: permisos/location services, autenticacion/pairing y los caminos de cancelacion/fallo fuera del success path de emulador/dev-mode,
+- falta una verificacion manual final de conciliacion contra backend/tickets creados desde UI, mas alla del `200` confirmado en logcat para `POST /api/tickets`,
 - para reproducir el build real de tarjeta en otra maquina sigue haciendo falta configurar localmente `LCX_ZETTLE_GITHUB_TOKEN` para GitHub Packages y alinear `LCX_ANDROID_APPLICATION_ID`/suffixes al app aprobado por Zettle,
-- antes de flippear a `DONE` falta smoke manual real de tarjeta: login operativo, permiso/location service, autenticacion del SDK y cobro/cancelacion/failed path con lector disponible del entorno.
+- antes de flippear a `DONE` falta smoke manual real de tarjeta con lector disponible del entorno: permiso/location service, autenticacion del SDK y cobro/cancelacion/failed path fisico.
 
 ### G1.9 Role access completo de operador
 
