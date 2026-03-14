@@ -13,7 +13,10 @@ import org.junit.Test
 class FeatureFlagPaymentSwitchTest {
 
     private val stubPaymentManager = StubPaymentManager()
-    private val unavailableZettlePaymentManager = UnavailableZettlePaymentManager(buildConfig())
+    private val zettlePaymentManager = ZettlePaymentManager(
+        buildConfig(),
+        ZettleActivityLauncherBridge(),
+    )
 
     private fun flagsWith(useRealZettle: Boolean) = object : FeatureFlags {
         override val useRealZettle: Boolean = useRealZettle
@@ -40,22 +43,22 @@ class FeatureFlagPaymentSwitchTest {
         val manager = PaymentModule.providePaymentManager(
             flags,
             stubPaymentManager,
-            unavailableZettlePaymentManager,
+            zettlePaymentManager,
         )
         assertSame(stubPaymentManager, manager)
     }
 
     @Test
-    fun `when useRealZettle is true, provides unavailable real manager`() {
+    fun `when useRealZettle is true, provides zettle payment manager`() {
         val flags = flagsWith(useRealZettle = true)
         val manager = PaymentModule.providePaymentManager(
             flags,
             stubPaymentManager,
-            unavailableZettlePaymentManager,
+            zettlePaymentManager,
         )
 
-        assertSame(unavailableZettlePaymentManager, manager)
+        assertSame(zettlePaymentManager, manager)
         assertTrue(!manager.capability().canAcceptPayments)
-        assertTrue(manager.capability().statusMessage.contains("Zettle"))
+        assertTrue(manager.capability().statusMessage.contains("actividad"))
     }
 }

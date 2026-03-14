@@ -217,7 +217,7 @@
       "public": false,
       "route_present": true,
       "parity_done": false,
-      "notes": "native sales feature now loads live equipment/add-on/sellable inventory catalogs, supports customer search/create plus anonymous customer, builds mixed-cart source=venta batches with one ticket per equipment item plus a consolidated product ticket, and uses native payment selection (cash/transfer direct, card via terminal with explicit critical-recovery UX); the card path was hardened so USE_REAL_ZETTLE=true exposes an explicit unavailable backend instead of crashing DI and now validates configured clientId/redirect/applicationId alignment, but parity is still pending because this workspace does not yet resolve the real Zettle Android SDK from GitHub Packages or provide a valid operator QA session beyond the Login screen"
+      "notes": "native sales feature now loads live equipment/add-on/sellable inventory catalogs, supports customer search/create plus anonymous customer, builds mixed-cart source=venta batches with one ticket per equipment item plus a consolidated product ticket, and uses native payment selection (cash/transfer direct, card via terminal with explicit critical-recovery UX); the real Zettle Android SDK is now wired in code (GitHub Packages, OAuthActivity, SDK init, ActivityResult bridge) and devDebug was assembled locally with USE_REAL_ZETTLE=true plus approved app id alignment, but parity is still pending because manual operator smoke post-login and real terminal validation have not happened yet"
     },
     {
       "id": "op-incidentes-nuevo",

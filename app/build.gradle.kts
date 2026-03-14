@@ -1,3 +1,5 @@
+import java.net.URI
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -61,6 +63,11 @@ val devUseRealBrother = readBooleanConfig(
     envName = "LCX_DEV_USE_REAL_BROTHER",
     defaultValue = false,
 )
+val devUseRealZettle = readBooleanConfig(
+    propertyName = "LCX_DEV_USE_REAL_ZETTLE",
+    envName = "LCX_DEV_USE_REAL_ZETTLE",
+    defaultValue = false,
+)
 val androidApplicationId = readConfig(
     propertyName = "LCX_ANDROID_APPLICATION_ID",
     envName = "LCX_ANDROID_APPLICATION_ID",
@@ -91,6 +98,9 @@ val zettleApprovedApplicationId = readConfig(
     envName = "LCX_ZETTLE_APPROVED_APPLICATION_ID",
     defaultValue = "com.cleanx.app",
 )
+val zettleRedirectUri = runCatching { URI.create(zettleRedirectUrl) }.getOrNull()
+val zettleRedirectScheme = zettleRedirectUri?.scheme ?: ""
+val zettleRedirectHost = zettleRedirectUri?.host ?: ""
 
 android {
     namespace = "com.cleanx.lcx"
@@ -116,6 +126,8 @@ android {
             "ZETTLE_APPROVED_APPLICATION_ID",
             zettleApprovedApplicationId.toBuildConfigString(),
         )
+        manifestPlaceholders["zettleRedirectScheme"] = zettleRedirectScheme
+        manifestPlaceholders["zettleRedirectHost"] = zettleRedirectHost
     }
 
     flavorDimensions += "environment"
@@ -128,7 +140,7 @@ android {
             buildConfigField("String", "NOTIFICATIONS_BASE_URL", devNotificationsBaseUrl.toBuildConfigString())
             buildConfigField("String", "SUPABASE_URL", devSupabaseUrl.toBuildConfigString())
             buildConfigField("String", "SUPABASE_ANON_KEY", devSupabaseAnonKey.toBuildConfigString())
-            buildConfigField("Boolean", "USE_REAL_ZETTLE", "false")
+            buildConfigField("Boolean", "USE_REAL_ZETTLE", devUseRealZettle.toString())
             buildConfigField("Boolean", "USE_REAL_BROTHER", devUseRealBrother.toString())
         }
         create("staging") {

@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">LCX</string>
+    <string name="oauth_activity_task_affinity">${applicationId}.oauth</string>
 </resources>

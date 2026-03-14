@@ -4,10 +4,12 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import com.cleanx.lcx.core.navigation.LcxNavHost
 import com.cleanx.lcx.core.network.SessionExpiredInterceptor
 import com.cleanx.lcx.core.session.SessionManager
 import com.cleanx.lcx.core.theme.LcxTheme
+import com.cleanx.lcx.feature.payments.data.ZettleActivityLauncherBridge
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -16,10 +18,16 @@ class MainActivity : ComponentActivity() {
 
     @Inject lateinit var sessionExpiredInterceptor: SessionExpiredInterceptor
     @Inject lateinit var sessionManager: SessionManager
+    @Inject lateinit var zettleActivityLauncherBridge: ZettleActivityLauncherBridge
+
+    private val zettlePaymentLauncher = registerForActivityResult(StartActivityForResult()) { result ->
+        zettleActivityLauncherBridge.onActivityResult(result.resultCode, result.data)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        zettleActivityLauncherBridge.register(this, zettlePaymentLauncher)
         setContent {
             LcxTheme {
                 LcxNavHost(
@@ -28,5 +36,10 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
+    }
+
+    override fun onDestroy() {
+        zettleActivityLauncherBridge.unregister(this)
+        super.onDestroy()
     }
 }

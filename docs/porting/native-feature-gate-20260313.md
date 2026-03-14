@@ -415,15 +415,16 @@ Estado al 2026-03-13:
 - arma tickets `source=venta` equivalentes al PWA: un ticket por equipo y un ticket consolidado `Venta Productos` para productos/inventario,
 - pago nativo: efectivo/transfer persisten directo como `paid`; tarjeta cobra primero en la terminal nativa y luego crea el batch `venta`,
 - si tarjeta cobra pero `POST /api/tickets` falla, la UI deja estado critico con `transactionId` y `correlationId` para conciliacion manual en vez de reintentar a ciegas y duplicar ventas,
-- el wiring de pagos ya no rompe por flavor cuando `USE_REAL_ZETTLE=true`: Android ahora expone un backend `SDK real no integrado` explicito, inicializa el backend al arrancar y falla con mensaje operativo claro en vez de crash de DI,
-- Android ya acepta config de Zettle por build (`clientId`, `redirectUrl`, `approved applicationId`) y diagnostica si el APK actual no coincide con el app aprobado por Zettle.
+- el wiring de pagos ya no rompe por flavor cuando `USE_REAL_ZETTLE=true`: Android integra el SDK real de Zettle, registra `OAuthActivity`, inicializa el SDK al arrancar y lanza el flujo de cobro via `ActivityResult` desde `MainActivity`,
+- Android acepta config de Zettle por build (`clientId`, `redirectUrl`, `approved applicationId`) y diagnostica si el APK actual no coincide con el app aprobado por Zettle,
+- `devDebug` ya se pudo ensamblar localmente con `USE_REAL_ZETTLE=true`, `clientId`/`redirectUrl` reales y `applicationId` alineado a `com.cleanx.app` via config local fuera de git.
 
 Residual exacto para flippear a `DONE`:
 
 - falta smoke manual en Android con una venta mixta real: cliente anonimo o seleccionado, equipo + producto, y validacion final de los tickets generados,
 - falta smoke manual especifico del path tarjeta para confirmar UX/operacion con la terminal disponible del entorno,
-- el bloqueo vigente del path tarjeta ya no es ambiguo: este workspace todavia no integra el SDK real de Zettle en Android y tampoco incluye un `GITHUB_TOKEN` valido para resolver las dependencias del SDK desde GitHub Packages,
-- antes del smoke de tarjeta siguen faltando como minimo integrar dependencias Android SDK de Zettle, registrar `OAuthActivity` real y alinear el `applicationId` final del APK con el app aprobado actualmente por Zettle (`com.cleanx.app` vs build actual del repo).
+- para reproducir el build real de tarjeta en otra maquina sigue haciendo falta configurar localmente `LCX_ZETTLE_GITHUB_TOKEN` para GitHub Packages y alinear `LCX_ANDROID_APPLICATION_ID`/suffixes al app aprobado por Zettle,
+- antes de flippear a `DONE` falta smoke manual real de tarjeta: login operativo, permiso/location service, autenticacion del SDK y cobro/cancelacion/failed path con lector disponible del entorno.
 
 ### G1.9 Role access completo de operador
 
