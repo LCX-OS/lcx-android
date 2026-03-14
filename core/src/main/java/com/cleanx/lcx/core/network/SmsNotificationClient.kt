@@ -206,12 +206,12 @@ class SmsNotificationClient @Inject constructor(
 
     private fun buildTicketReadyPickupMessage(ticketNumber: String): String {
         val cleaned = ticketNumber.trim().ifEmpty { "tu ticket" }
-        return "Tu ticket $cleaned ya esta listo para recoger. Gracias por usar CleanX."
+        return "Tu ticket $cleaned ya esta listo para recoger. Gracias por usar Clean X."
     }
 
     private fun buildTicketPickupReminderMessage(ticketNumber: String): String {
         val cleaned = ticketNumber.trim().ifEmpty { "tu ticket" }
-        return "Recordatorio: tu ticket $cleaned sigue listo para recoger en CleanX."
+        return "Recordatorio: tu ticket $cleaned sigue listo para recoger en Clean X."
     }
 
     private fun Response<*>.parseError(): SmsNotificationResult.Error {

@@ -2,6 +2,7 @@ package com.cleanx.lcx.ui.shell
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
@@ -32,6 +33,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -210,12 +212,15 @@ fun MainScaffold(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
                                 Image(
-                                    painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                                    contentDescription = "Logo Kleenex",
-                                    modifier = Modifier.size(24.dp),
+                                    painter = painterResource(id = R.drawable.cleanx_logo),
+                                    contentDescription = "Logo Clean X",
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier
+                                        .height(24.dp)
+                                        .width(72.dp),
                                 )
                                 Text(
-                                    text = "Kleenex",
+                                    text = "Clean X",
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.SemiBold,
                                 )
