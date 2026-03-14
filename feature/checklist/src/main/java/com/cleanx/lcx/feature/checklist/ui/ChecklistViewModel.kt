@@ -2,10 +2,10 @@ package com.cleanx.lcx.feature.checklist.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cleanx.lcx.core.operational.OperatorOperationalRepository
 import com.cleanx.lcx.feature.checklist.data.Checklist
 import com.cleanx.lcx.feature.checklist.data.ChecklistItem
 import com.cleanx.lcx.feature.checklist.data.ChecklistItemUi
-import com.cleanx.lcx.feature.checklist.data.ChecklistOperationalStatus
 import com.cleanx.lcx.feature.checklist.data.ChecklistRepository
 import com.cleanx.lcx.feature.checklist.data.ChecklistStatus
 import com.cleanx.lcx.feature.checklist.data.ChecklistType
@@ -22,6 +22,7 @@ import com.cleanx.lcx.core.session.SessionProfile
 import com.cleanx.lcx.core.session.SessionProfileRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -77,6 +78,7 @@ data class ChecklistUiState(
 @HiltViewModel
 class ChecklistViewModel @Inject constructor(
     private val repository: ChecklistRepository,
+    private val operationalRepository: OperatorOperationalRepository,
     private val sessionProfileRepository: SessionProfileRepository,
 ) : ViewModel() {
 
@@ -164,20 +166,19 @@ class ChecklistViewModel @Inject constructor(
                     return@launch
                 }
 
-            val waterDone = repository.hasWaterLevelToday(profile.branch)
-            val cashDone = repository.hasCashMovementToday(CASH_MOVEMENT_OPENING)
-            val operationalStatus = ChecklistOperationalStatus(
-                waterReviewedToday = waterDone,
-                openingCashRegisteredToday = cashDone,
-            )
+            val operationalDeferred = async {
+                operationalRepository.loadSnapshot(branch = profile.branch)
+            }
+            val checklistResult = repository.getTodayChecklist(ChecklistType.ENTRADA)
+            val requirements = operationalDeferred.await().checklistRequirements
 
-            repository.getTodayChecklist(ChecklistType.ENTRADA)
+            checklistResult
                 .onSuccess { (checklist, items) ->
                     val syncedItems = syncSystemItems(
                         items = items,
                         userId = profile.userId,
                         expectedCompletion = ChecklistType.ENTRADA.systemRequirementExpectations(
-                            operationalStatus,
+                            requirements,
                         ),
                     )
                     val uiItems = toUiItems(syncedItems)
@@ -193,8 +194,8 @@ class ChecklistViewModel @Inject constructor(
                             entryRequiredTotal = total,
                             entryCanComplete = canCompleteChecklist(uiItems)
                                 && checklist.status != ChecklistStatus.COMPLETED,
-                            waterLevelRecorded = waterDone,
-                            cashRegisterOpened = cashDone,
+                            waterLevelRecorded = requirements.waterReviewedToday,
+                            cashRegisterOpened = requirements.openingCashRegisteredToday,
                         )
                     }
                 }
@@ -221,18 +222,19 @@ class ChecklistViewModel @Inject constructor(
                     return@launch
                 }
 
-            val cashDone = repository.hasCashMovementToday(CASH_MOVEMENT_CLOSING)
-            val operationalStatus = ChecklistOperationalStatus(
-                closingCashRegisteredToday = cashDone,
-            )
+            val operationalDeferred = async {
+                operationalRepository.loadSnapshot(branch = profile.branch)
+            }
+            val checklistResult = repository.getTodayChecklist(ChecklistType.SALIDA)
+            val requirements = operationalDeferred.await().checklistRequirements
 
-            repository.getTodayChecklist(ChecklistType.SALIDA)
+            checklistResult
                 .onSuccess { (checklist, items) ->
                     val syncedItems = syncSystemItems(
                         items = items,
                         userId = profile.userId,
                         expectedCompletion = ChecklistType.SALIDA.systemRequirementExpectations(
-                            operationalStatus,
+                            requirements,
                         ),
                     )
                     val uiItems = toUiItems(syncedItems)
@@ -248,7 +250,7 @@ class ChecklistViewModel @Inject constructor(
                             exitRequiredTotal = total,
                             exitCanComplete = canCompleteChecklist(uiItems)
                                 && checklist.status != ChecklistStatus.COMPLETED,
-                            cashRegisterClosed = cashDone,
+                            cashRegisterClosed = requirements.closingCashRegisteredToday,
                         )
                     }
                 }

@@ -197,7 +197,12 @@ private fun HeroCard(
                     )
                 }
                 Text(
-                    text = "Prioriza agua, caja y checklist sin depender del PWA.",
+                    text = snapshot.operationalSummary.headline,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                )
+                Text(
+                    text = snapshot.operationalSummary.recommendation,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -352,16 +357,19 @@ private fun RoutineRow(item: DashboardRoutineItem) {
                 DashboardRoutineState.DONE -> "OK"
                 DashboardRoutineState.IN_PROGRESS -> "En curso"
                 DashboardRoutineState.PENDING -> "Pendiente"
+                DashboardRoutineState.BLOCKING -> "Bloqueante"
             },
             background = when (item.state) {
                 DashboardRoutineState.DONE -> Color(0xFFDFF6E4)
                 DashboardRoutineState.IN_PROGRESS -> Color(0xFFFFE7C2)
-                DashboardRoutineState.PENDING -> Color(0xFFFFE1E1)
+                DashboardRoutineState.PENDING -> Color(0xFFFFF0D2)
+                DashboardRoutineState.BLOCKING -> Color(0xFFFFE1E1)
             },
             content = when (item.state) {
                 DashboardRoutineState.DONE -> Color(0xFF136B2C)
                 DashboardRoutineState.IN_PROGRESS -> Color(0xFF9A5B00)
-                DashboardRoutineState.PENDING -> Color(0xFF9C2F2F)
+                DashboardRoutineState.PENDING -> Color(0xFF8A5A00)
+                DashboardRoutineState.BLOCKING -> Color(0xFF9C2F2F)
             },
         )
     }

@@ -2,10 +2,13 @@ package com.cleanx.lcx.ui.dashboard
 
 import com.cleanx.lcx.core.model.Ticket
 import com.cleanx.lcx.core.model.TicketStatus
-import com.cleanx.lcx.feature.checklist.data.Checklist
-import com.cleanx.lcx.feature.checklist.data.ChecklistStatus
+import com.cleanx.lcx.core.operational.OperatorOperationalGroup
+import com.cleanx.lcx.core.operational.OperatorOperationalProgress
+import com.cleanx.lcx.core.operational.OperatorOperationalRoutine
+import com.cleanx.lcx.core.operational.OperatorOperationalStatus
+import com.cleanx.lcx.core.operational.OperatorOperationalSummary
+import com.cleanx.lcx.core.operational.OperatorOperationalTask
 import com.cleanx.lcx.feature.tickets.data.InventoryCatalogRecord
-import com.cleanx.lcx.feature.water.data.WaterLevelWithUser
 import java.time.Duration
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -14,9 +17,15 @@ import java.time.format.DateTimeParseException
 data class DashboardSnapshot(
     val operatorName: String,
     val branchName: String?,
+    val operationalSummary: DashboardOperationalSummary,
     val routine: DashboardRoutineSection,
     val pendingTickets: DashboardPendingTicketsSection,
     val supplyNeeds: DashboardSupplyNeedsSection,
+)
+
+data class DashboardOperationalSummary(
+    val headline: String,
+    val recommendation: String,
 )
 
 data class DashboardRoutineSection(
@@ -41,6 +50,7 @@ enum class DashboardRoutineState {
     DONE,
     IN_PROGRESS,
     PENDING,
+    BLOCKING,
 }
 
 data class DashboardPendingTicketsSection(
@@ -85,70 +95,47 @@ fun isOperationalPendingTicket(status: TicketStatus): Boolean = status != Ticket
 
 fun DashboardRoutineState.isDone(): Boolean = this == DashboardRoutineState.DONE
 
-fun checklistRoutineState(checklist: Checklist?): DashboardRoutineState {
-    return when (checklist?.status) {
-        ChecklistStatus.COMPLETED -> DashboardRoutineState.DONE
-        ChecklistStatus.IN_PROGRESS -> DashboardRoutineState.IN_PROGRESS
-        ChecklistStatus.PENDING,
-        null,
-        -> DashboardRoutineState.PENDING
+fun OperatorOperationalRoutine.toDashboardRoutineSection(): DashboardRoutineSection {
+    return DashboardRoutineSection(
+        entryGroup = entry.toDashboardRoutineGroup(),
+        exitGroup = exit.toDashboardRoutineGroup(),
+    )
+}
+
+fun OperatorOperationalSummary.toDashboardOperationalSummary(): DashboardOperationalSummary {
+    return DashboardOperationalSummary(
+        headline = headline,
+        recommendation = recommendation,
+    )
+}
+
+fun OperatorOperationalTask.toDashboardRoutineItem(): DashboardRoutineItem {
+    return DashboardRoutineItem(
+        title = title,
+        state = toDashboardRoutineState(),
+        detail = detail,
+    )
+}
+
+fun OperatorOperationalTask.toDashboardRoutineState(): DashboardRoutineState {
+    if (status == OperatorOperationalStatus.BLOCKING && progress != OperatorOperationalProgress.COMPLETED) {
+        return DashboardRoutineState.BLOCKING
+    }
+
+    return when (progress) {
+        OperatorOperationalProgress.COMPLETED -> DashboardRoutineState.DONE
+        OperatorOperationalProgress.IN_PROGRESS -> DashboardRoutineState.IN_PROGRESS
+        OperatorOperationalProgress.PENDING -> DashboardRoutineState.PENDING
     }
 }
 
-fun checklistRoutineDetail(checklist: Checklist?): String {
-    return when (checklist?.status) {
-        ChecklistStatus.COMPLETED -> "Completado hoy"
-        ChecklistStatus.IN_PROGRESS -> "En progreso"
-        ChecklistStatus.PENDING -> "Pendiente por completar"
-        null -> "Aun no iniciado hoy"
-    }
-}
-
-fun waterRoutineDetail(
-    latestLevel: WaterLevelWithUser?,
-    recordedToday: Boolean,
-): String {
-    if (!recordedToday) {
-        return "Sin registro de agua hoy"
-    }
-
-    val percentage = latestLevel?.levelPercentage
-    val statusLabel = latestLevel?.status?.name?.lowercase()
-    return if (percentage != null && statusLabel != null) {
-        "$percentage% - $statusLabel"
-    } else {
-        "Nivel validado hoy"
-    }
-}
-
-fun cashOpeningRoutineDetail(openingRegistered: Boolean): String {
-    return if (openingRegistered) {
-        "Apertura registrada hoy"
-    } else {
-        "Pendiente de registrar apertura"
-    }
-}
-
-fun cashClosingRoutineState(
-    openingRegistered: Boolean,
-    closingRegistered: Boolean,
-): DashboardRoutineState {
-    return when {
-        closingRegistered -> DashboardRoutineState.DONE
-        openingRegistered -> DashboardRoutineState.IN_PROGRESS
-        else -> DashboardRoutineState.PENDING
-    }
-}
-
-fun cashClosingRoutineDetail(
-    openingRegistered: Boolean,
-    closingRegistered: Boolean,
-): String {
-    return when {
-        closingRegistered -> "Corte de caja registrado hoy"
-        openingRegistered -> "Apertura registrada, falta corte"
-        else -> "Aun no hay apertura de caja hoy"
-    }
+private fun OperatorOperationalGroup.toDashboardRoutineGroup(): DashboardRoutineGroup {
+    return DashboardRoutineGroup(
+        title = title,
+        completedCount = completedCount,
+        totalCount = totalCount,
+        items = items.map { it.toDashboardRoutineItem() },
+    )
 }
 
 fun ticketPriorityFor(

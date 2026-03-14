@@ -1,7 +1,10 @@
 package com.cleanx.lcx.ui.dashboard
 
-import com.cleanx.lcx.feature.checklist.data.Checklist
-import com.cleanx.lcx.feature.checklist.data.ChecklistStatus
+import com.cleanx.lcx.core.operational.OperatorOperationalAction
+import com.cleanx.lcx.core.operational.OperatorOperationalProgress
+import com.cleanx.lcx.core.operational.OperatorOperationalStatus
+import com.cleanx.lcx.core.operational.OperatorOperationalTask
+import com.cleanx.lcx.core.operational.OperatorOperationalTaskKey
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -37,23 +40,27 @@ class DashboardModelsTest {
     }
 
     @Test
-    fun `checklist status maps to routine state and detail`() {
-        val completed = Checklist(
-            id = "chk-1",
-            status = ChecklistStatus.COMPLETED,
-            date = "2026-03-13",
+    fun `operational task maps blocking and progress to dashboard states`() {
+        val blockingTask = OperatorOperationalTask(
+            key = OperatorOperationalTaskKey.WATER_LEVEL,
+            title = "Nivel de agua",
+            progress = OperatorOperationalProgress.PENDING,
+            status = OperatorOperationalStatus.BLOCKING,
+            detail = "Sin registro de agua hoy",
+            action = OperatorOperationalAction.OPEN_WATER,
+            actionLabel = "Registrar nivel de agua",
         )
-        val inProgress = Checklist(
-            id = "chk-2",
-            status = ChecklistStatus.IN_PROGRESS,
-            date = "2026-03-13",
+        val inProgressTask = OperatorOperationalTask(
+            key = OperatorOperationalTaskKey.CASH_CLOSING,
+            title = "Corte de caja",
+            progress = OperatorOperationalProgress.IN_PROGRESS,
+            status = OperatorOperationalStatus.PENDING,
+            detail = "Apertura registrada, falta corte",
+            action = OperatorOperationalAction.OPEN_CASH,
+            actionLabel = "Registrar corte de caja",
         )
 
-        assertEquals(DashboardRoutineState.DONE, checklistRoutineState(completed))
-        assertEquals("Completado hoy", checklistRoutineDetail(completed))
-        assertEquals(DashboardRoutineState.IN_PROGRESS, checklistRoutineState(inProgress))
-        assertEquals("En progreso", checklistRoutineDetail(inProgress))
-        assertEquals(DashboardRoutineState.PENDING, checklistRoutineState(null))
-        assertEquals("Aun no iniciado hoy", checklistRoutineDetail(null))
+        assertEquals(DashboardRoutineState.BLOCKING, blockingTask.toDashboardRoutineState())
+        assertEquals(DashboardRoutineState.IN_PROGRESS, inProgressTask.toDashboardRoutineState())
     }
 }

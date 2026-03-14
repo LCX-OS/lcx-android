@@ -1,5 +1,6 @@
 package com.cleanx.lcx.feature.checklist.data
 
+import com.cleanx.lcx.core.operational.ChecklistRoutineRequirements
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -11,7 +12,7 @@ class ChecklistRulesTest {
     @Test
     fun `entry system requirements track water and opening cash`() {
         val expectations = ChecklistType.ENTRADA.systemRequirementExpectations(
-            ChecklistOperationalStatus(
+            ChecklistRoutineRequirements(
                 waterReviewedToday = true,
                 openingCashRegisteredToday = false,
                 closingCashRegisteredToday = true,
@@ -26,7 +27,7 @@ class ChecklistRulesTest {
     @Test
     fun `exit system requirements only track closing cash`() {
         val expectations = ChecklistType.SALIDA.systemRequirementExpectations(
-            ChecklistOperationalStatus(
+            ChecklistRoutineRequirements(
                 waterReviewedToday = true,
                 openingCashRegisteredToday = true,
                 closingCashRegisteredToday = false,

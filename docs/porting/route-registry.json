@@ -74,7 +74,7 @@
       "public": false,
       "route_present": true,
       "parity_done": false,
-      "notes": "native dashboard now replaces the placeholder with real quick actions, routine status, pending tickets, and low-stock supply cards; manual post-login smoke already validated the employee path end-to-end, including routine state flips for water and cash, live lower cards (`Tickets pendientes` + `Necesidades de suministros`), and navigation from `Abrir` into a real ticket detail, but parity stays false until non-employee role variants are explicitly rechecked"
+      "notes": "native dashboard now replaces the placeholder with real quick actions, routine status, pending tickets, and low-stock supply cards; routine state now comes from the shared `:core` operational layer (`OperatorOperationalRepository` / `OperatorOperationalSnapshot`) instead of screen-local derivation; manual post-login smoke already validated the employee path end-to-end, including routine state flips for water and cash, live lower cards (`Tickets pendientes` + `Necesidades de suministros`), and navigation from `Abrir` into a real ticket detail, but parity stays false until non-employee role variants are explicitly rechecked"
     },
     {
       "id": "op-agua",
@@ -118,7 +118,7 @@
       "public": false,
       "route_present": true,
       "parity_done": false,
-      "notes": "mapped to consolidated Checklist screen/tab; Entrada/Salida/Historial live as tabs and use the real feature module, entry system items re-sync on resume/manual verify against water_levels + cash_movements, and completion is revalidated against persisted required items before closing; manual post-login smoke already opened Entrada and confirmed both entry-1 (after Agua) and entry-2 (after caja apertura), but parity stays false until manual completion of the checklist is executed end-to-end"
+      "notes": "mapped to consolidated Checklist screen/tab; Entrada/Salida/Historial live as tabs and use the real feature module, entry system items now come from the shared `:core` operational layer plus re-sync on resume/manual verify against water_levels + cash_movements, and completion is revalidated against persisted required items before closing; manual post-login smoke already opened Entrada and confirmed both entry-1 (after Agua) and entry-2 (after caja apertura), but parity stays false until manual completion of the checklist is executed end-to-end"
     },
     {
       "id": "op-checklist-salida",
@@ -129,7 +129,7 @@
       "public": false,
       "route_present": true,
       "parity_done": false,
-      "notes": "mapped to consolidated Checklist screen/tab; Salida lives in the second tab, auto-validates closing cash from cash_movements, re-syncs on resume/manual verify, and blocks completion if persisted required items are still incomplete; manual post-login smoke already confirmed exit-1 after caja cierre, but parity stays false until final completion is exercised end-to-end and the team decides whether Salida should be allowed to advance while Entrada is still incomplete"
+      "notes": "mapped to consolidated Checklist screen/tab; Salida lives in the second tab, now reads the same shared `:core` operational layer as Dashboard for closing-cash state, re-syncs on resume/manual verify, and blocks completion if persisted required items are still incomplete; manual post-login smoke already confirmed exit-1 after caja cierre, but parity stays false until final completion is exercised end-to-end and the team decides whether Salida should be allowed to advance while Entrada is still incomplete"
     },
     {
       "id": "op-checklist-historial",

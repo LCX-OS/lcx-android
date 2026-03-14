@@ -47,6 +47,7 @@ Estados de trabajo usados por este gate:
 - Caja como tab funcional con registrar + historial.
 - Agua conectada al feature real, con scoping por `profile.branch` y persistencia de `recorded_by` / `branch`.
 - Dashboard operador nativo con quick actions reales, rutina operativa del dia y agregados minimos de tickets pendientes + suministros.
+- El estado operativo del turno ya se centraliza en `:core` via `OperatorOperationalRepository` / `OperatorOperationalSnapshot`, compartido por Dashboard y Checklist.
 - More hub y role guards operator/manager.
 
 ### 3.2 Existe en codigo pero no esta conectado al producto real
@@ -144,6 +145,7 @@ Estado al 2026-03-13:
 
 - `Screen.Dashboard` ya no usa placeholder; monta un dashboard nativo con quick actions reales hacia Checklist, Agua, Caja y Nuevo encargo,
 - agrega rutina operativa con estado de checklist entrada/salida, agua y caja sobre datos reales del backend,
+- la rutina del dashboard ya no recompone reglas locales: consume la capa compartida `:core` (`OperatorOperationalRepository` / `OperatorOperationalSnapshot`) que concentra agua + checklist + caja y expone resumen + recomendacion reutilizable,
 - agrega pendientes operativos minimos con tickets abiertos y suministros bajos sin inventar metricas nuevas,
 - el smoke manual post-login ya confirmo quick actions reales y rutina operativa viva con una sesion `employee` del entorno; tras guardar Agua y registrar apertura/cierre de Caja, el dashboard reflejo `Nivel de agua = OK`, `Apertura de caja = OK` y `Corte de caja = OK`,
 - las tarjetas inferiores tambien quedaron revalidadas con data real: `Tickets pendientes` mostro `Abiertos: 86`, el CTA `Abrir` navego a un detail real (`T-20260306-0001` / `Diego Jimenez`) y `Necesidades de suministros` renderizo su empty state real (`No hay suministros por reordenar.`).
@@ -292,6 +294,7 @@ Estado al 2026-03-13:
 
 - `Screen.Checklist` ya monta la feature real consolidada en tabs `Entrada` / `Salida` / `Historial`,
 - la auto-validacion sigue el contrato PWA sobre `water_levels` + `cash_movements` (`entry-1`, `entry-2`, `exit-1`) y no depende de `cash_registers`,
+- Dashboard y Checklist ya consumen la misma fuente de verdad nativa del estado operativo (`:core` -> `OperatorOperationalRepository` / `OperatorOperationalSnapshot`), en vez de recalcular agua/caja/checklists por separado en cada pantalla,
 - al volver al foreground o tocar `Verificar`, Android vuelve a sincronizar los items sistemicos para no dejar estado viejo despues de pasar por Agua o Caja,
 - antes de completar un checklist, Android revalida en BD que todos los requeridos sigan completos para no cerrar con drift local o carrera de estado,
 - los checklists completados siguen en modo read-only y el historial nativo conserva el minimo operativo de completados recientes,
@@ -614,6 +617,7 @@ Menor arrepentimiento tecnico:
 Razon:
 
 - Dashboard depende de agua, caja, checklist y tickets.
+- Dashboard y Checklist ya comparten una capa comun para agua/caja/checklists; cerrar Agua/Caja/Checklist primero sigue reduciendo drift y costo de mantenimiento.
 - Checklist depende de agua y caja correctos.
 - Ventas reutiliza customer/catalog/payment primitives que tambien sirven para encargos.
 - Admin y Gerencia son alto volumen de UI pero no desbloquean operacion de piso.

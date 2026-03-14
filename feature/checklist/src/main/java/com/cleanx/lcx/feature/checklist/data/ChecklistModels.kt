@@ -1,5 +1,6 @@
 package com.cleanx.lcx.feature.checklist.data
 
+import com.cleanx.lcx.core.operational.ChecklistRoutineRequirements
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -130,12 +131,6 @@ data class ChecklistItemUi(
     val isSystemValidated: Boolean,
 )
 
-data class ChecklistOperationalStatus(
-    val waterReviewedToday: Boolean = false,
-    val openingCashRegisteredToday: Boolean = false,
-    val closingCashRegisteredToday: Boolean = false,
-)
-
 data class ChecklistCompletionGate(
     val canComplete: Boolean,
     val reason: String? = null,
@@ -188,15 +183,15 @@ fun ChecklistItem.toUi(): ChecklistItemUi {
 }
 
 fun ChecklistType.systemRequirementExpectations(
-    status: ChecklistOperationalStatus,
+    requirements: ChecklistRoutineRequirements,
 ): Map<String, Boolean> = when (this) {
     ChecklistType.ENTRADA -> mapOf(
-        TEMPLATE_WATER_LEVEL to status.waterReviewedToday,
-        TEMPLATE_OPENING_CASH to status.openingCashRegisteredToday,
+        TEMPLATE_WATER_LEVEL to requirements.waterReviewedToday,
+        TEMPLATE_OPENING_CASH to requirements.openingCashRegisteredToday,
     )
 
     ChecklistType.SALIDA -> mapOf(
-        TEMPLATE_CLOSING_CASH to status.closingCashRegisteredToday,
+        TEMPLATE_CLOSING_CASH to requirements.closingCashRegisteredToday,
     )
 }
 
