@@ -13,11 +13,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.AddTask
 import androidx.compose.material.icons.outlined.Checklist
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.LocalLaundryService
-import androidx.compose.material.icons.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.WaterDrop
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -37,8 +37,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.cleanx.lcx.core.theme.LcxError
 import com.cleanx.lcx.core.model.TicketStatus
 import com.cleanx.lcx.core.theme.LcxSpacing
+import com.cleanx.lcx.core.theme.LcxSuccess
+import com.cleanx.lcx.core.theme.LcxWarning
 import com.cleanx.lcx.core.ui.ErrorState
 import com.cleanx.lcx.core.ui.LcxCard
 import com.cleanx.lcx.core.ui.QuickActionCard
@@ -120,7 +123,7 @@ private fun DashboardContent(
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = LcxSpacing.md),
+            .padding(horizontal = LcxSpacing.screenHorizontal),
         verticalArrangement = Arrangement.spacedBy(LcxSpacing.sm),
     ) {
         item { Spacer(modifier = Modifier.height(LcxSpacing.xs)) }
@@ -267,7 +270,7 @@ private fun QuickActionsSection(
         ) {
             Box(modifier = Modifier.weight(1f)) {
                 QuickActionCard(
-                    icon = Icons.Outlined.ReceiptLong,
+                    icon = Icons.AutoMirrored.Outlined.ReceiptLong,
                     title = "Caja",
                     description = "Apertura, gastos y corte",
                     onClick = onOpenCash,
@@ -300,7 +303,7 @@ private fun RoutineGroupCard(group: DashboardRoutineGroup) {
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.28f),
+                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f),
                 shape = MaterialTheme.shapes.medium,
             )
             .padding(LcxSpacing.md),
@@ -360,16 +363,16 @@ private fun RoutineRow(item: DashboardRoutineItem) {
                 DashboardRoutineState.BLOCKING -> "Bloqueante"
             },
             background = when (item.state) {
-                DashboardRoutineState.DONE -> Color(0xFFDFF6E4)
-                DashboardRoutineState.IN_PROGRESS -> Color(0xFFFFE7C2)
-                DashboardRoutineState.PENDING -> Color(0xFFFFF0D2)
-                DashboardRoutineState.BLOCKING -> Color(0xFFFFE1E1)
+                DashboardRoutineState.DONE -> LcxSuccess.copy(alpha = 0.14f)
+                DashboardRoutineState.IN_PROGRESS -> LcxWarning.copy(alpha = 0.14f)
+                DashboardRoutineState.PENDING -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.18f)
+                DashboardRoutineState.BLOCKING -> LcxError.copy(alpha = 0.14f)
             },
             content = when (item.state) {
-                DashboardRoutineState.DONE -> Color(0xFF136B2C)
-                DashboardRoutineState.IN_PROGRESS -> Color(0xFF9A5B00)
-                DashboardRoutineState.PENDING -> Color(0xFF8A5A00)
-                DashboardRoutineState.BLOCKING -> Color(0xFF9C2F2F)
+                DashboardRoutineState.DONE -> LcxSuccess
+                DashboardRoutineState.IN_PROGRESS -> LcxWarning
+                DashboardRoutineState.PENDING -> MaterialTheme.colorScheme.onPrimaryContainer
+                DashboardRoutineState.BLOCKING -> LcxError
             },
         )
     }
@@ -463,8 +466,8 @@ private fun TicketRow(
             if (item.priority == DashboardTicketPriority.HIGH) {
                 StatusPill(
                     label = "Alta",
-                    background = Color(0xFFFFE1E1),
-                    content = Color(0xFF9C2F2F),
+                    background = LcxError.copy(alpha = 0.14f),
+                    content = LcxError,
                 )
             }
             TextButton(onClick = onOpenTicket) {
@@ -548,14 +551,14 @@ private fun SupplyRow(item: DashboardSupplyNeed) {
                 "Bajo"
             },
             background = if (item.severity == DashboardSupplySeverity.CRITICAL) {
-                Color(0xFFFFE1E1)
+                LcxError.copy(alpha = 0.14f)
             } else {
-                Color(0xFFFFE7C2)
+                LcxWarning.copy(alpha = 0.14f)
             },
             content = if (item.severity == DashboardSupplySeverity.CRITICAL) {
-                Color(0xFF9C2F2F)
+                LcxError
             } else {
-                Color(0xFF9A5B00)
+                LcxWarning
             },
         )
     }

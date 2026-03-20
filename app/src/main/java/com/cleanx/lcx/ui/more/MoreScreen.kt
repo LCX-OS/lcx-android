@@ -5,16 +5,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.EventNote
 import androidx.compose.material.icons.automirrored.filled.Help
+import androidx.compose.material.icons.automirrored.filled.Label
+import androidx.compose.material.icons.automirrored.filled.NoteAdd
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.EventNote
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Inventory
-import androidx.compose.material.icons.filled.Label
-import androidx.compose.material.icons.filled.NoteAdd
 import androidx.compose.material.icons.filled.PointOfSale
 import androidx.compose.material.icons.filled.ReportProblem
 import androidx.compose.material.icons.filled.Schedule
@@ -29,7 +29,7 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import com.cleanx.lcx.core.ui.LcxTopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -95,7 +95,7 @@ internal fun buildSections(
         MoreSection(
             title = "Ropa Dañada",
             items = listOf(
-                MoreItem("Nuevo Reporte", Icons.Filled.NoteAdd, Screen.DamagedClothingNew),
+                MoreItem("Nuevo Reporte", Icons.AutoMirrored.Filled.NoteAdd, Screen.DamagedClothingNew),
                 MoreItem("Historial", Icons.Filled.History, Screen.DamagedClothingHistory),
             ),
         ),
@@ -105,7 +105,7 @@ internal fun buildSections(
             title = "Insumos",
             items = listOf(
                 MoreItem("Inventario", Icons.Filled.Inventory, Screen.SuppliesInventory),
-                MoreItem("Etiquetas", Icons.Filled.Label, Screen.SuppliesLabels),
+                MoreItem("Etiquetas", Icons.AutoMirrored.Filled.Label, Screen.SuppliesLabels),
                 MoreItem("Reportes", Icons.Filled.Summarize, Screen.SuppliesReports),
                 MoreItem("Debug Brother", Icons.Filled.BugReport, Screen.SuppliesBrotherDebug),
             ),
@@ -124,7 +124,7 @@ internal fun buildSections(
             title = "Calendario",
             items = listOf(
                 MoreItem("Vista Mensual", Icons.Filled.CalendarMonth, Screen.CalendarMonthly),
-                MoreItem("Eventos", Icons.Filled.EventNote, Screen.CalendarEvents),
+                MoreItem("Eventos", Icons.AutoMirrored.Filled.EventNote, Screen.CalendarEvents),
             ),
         ),
     )
@@ -175,7 +175,7 @@ fun MoreScreen(
     Scaffold(
         modifier = modifier,
         topBar = {
-            TopAppBar(
+            LcxTopAppBar(
                 title = { Text("Más") },
             )
         },

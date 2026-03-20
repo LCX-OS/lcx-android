@@ -9,8 +9,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material.icons.outlined.PersonOutline
 import androidx.compose.material3.HorizontalDivider
@@ -24,8 +24,11 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import com.cleanx.lcx.core.ui.LcxTopAppBar
+import com.cleanx.lcx.core.ui.lcxNavigationBarItemColors
+import com.cleanx.lcx.core.ui.lcxNavigationDrawerItemColors
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -57,6 +60,7 @@ import com.cleanx.lcx.core.model.Ticket
 import com.cleanx.lcx.core.navigation.BottomNavItem
 import com.cleanx.lcx.core.navigation.RouteAccess
 import com.cleanx.lcx.core.navigation.Screen
+import com.cleanx.lcx.core.theme.LcxSpacing
 import com.cleanx.lcx.core.transaction.ui.TransactionScreen
 import com.cleanx.lcx.feature.cash.ui.CashScreen
 import com.cleanx.lcx.feature.cash.ui.CashViewModel
@@ -157,12 +161,31 @@ fun MainScaffold(
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            ModalDrawerSheet {
-                Text(
-                    text = "Navegación",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 20.dp),
-                )
+            ModalDrawerSheet(
+                drawerContainerColor = MaterialTheme.colorScheme.surface,
+                drawerContentColor = MaterialTheme.colorScheme.onSurface,
+            ) {
+                Row(
+                    modifier = Modifier.padding(
+                        horizontal = LcxSpacing.screenHorizontal,
+                        vertical = LcxSpacing.cardPadding,
+                    ),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(LcxSpacing.sm),
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.cleanx_logo),
+                        contentDescription = "Logo Clean X",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .height(28.dp)
+                            .width(84.dp),
+                    )
+                    Text(
+                        text = "Clean X",
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                }
                 HorizontalDivider()
                 drawerItems.forEach { item ->
                     val selected = currentDestination?.hierarchy?.any {
@@ -180,18 +203,20 @@ fun MainScaffold(
                                 }
                             }
                         },
+                        colors = lcxNavigationDrawerItemColors(),
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp),
                     )
                 }
                 HorizontalDivider(modifier = Modifier.padding(top = 8.dp))
                 NavigationDrawerItem(
                     label = { Text("Cerrar sesión") },
-                    icon = { Icon(Icons.Filled.Logout, contentDescription = "Cerrar sesión") },
+                    icon = { Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Cerrar sesión") },
                     selected = false,
                     onClick = {
                         scope.launch { drawerState.close() }
                         onSignOut()
                     },
+                    colors = lcxNavigationDrawerItemColors(),
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                 )
             }
@@ -199,9 +224,10 @@ fun MainScaffold(
     ) {
         Scaffold(
             modifier = modifier,
+            containerColor = MaterialTheme.colorScheme.background,
             topBar = {
                 if (showShellTopBar) {
-                    TopAppBar(
+                    LcxTopAppBar(
                         navigationIcon = {
                             IconButton(onClick = { scope.launch { drawerState.open() } }) {
                                 Icon(
@@ -213,7 +239,7 @@ fun MainScaffold(
                         title = {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(LcxSpacing.sm),
                             ) {
                                 Image(
                                     painter = painterResource(id = R.drawable.cleanx_logo),
@@ -244,26 +270,37 @@ fun MainScaffold(
                                     contentDescription = "Notificaciones",
                                 )
                             }
-                            Row(
+                            Surface(
+                                shape = MaterialTheme.shapes.small,
+                                color = MaterialTheme.colorScheme.secondaryContainer,
                                 modifier = Modifier.padding(end = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.PersonOutline,
-                                    contentDescription = "Usuario",
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = userBadgeText,
-                                    style = MaterialTheme.typography.labelLarge,
-                                )
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.PersonOutline,
+                                        contentDescription = "Usuario",
+                                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = userBadgeText,
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    )
+                                }
                             }
                         },
                     )
                 }
             },
             bottomBar = {
-                NavigationBar {
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 0.dp,
+                ) {
                     visibleTabs.forEach { item ->
                         val selected = currentDestination?.hierarchy?.any {
                             it.hasRoute(item.graphRoute::class)
@@ -287,6 +324,7 @@ fun MainScaffold(
                                 )
                             },
                             label = { Text(item.label) },
+                            colors = lcxNavigationBarItemColors(),
                         )
                     }
                 }

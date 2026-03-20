@@ -1,6 +1,8 @@
 package com.cleanx.lcx.core.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -32,15 +34,6 @@ import com.cleanx.lcx.core.theme.LcxTheme
 
 /**
  * Dashboard card with icon, title, description, and clickable action.
- *
- * Designed for the home/dashboard screen where operators can quickly jump
- * to frequent actions.
- *
- * @param icon        Leading icon.
- * @param title       Card title.
- * @param description Supporting text.
- * @param onClick     Callback when the card is tapped.
- * @param modifier    Modifier forwarded to the root layout.
  */
 @Composable
 fun QuickActionCard(
@@ -58,20 +51,41 @@ fun QuickActionCard(
                 contentDescription = title
                 role = Role.Button
             },
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(LcxSpacing.md),
+                .padding(LcxSpacing.cardPadding),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(40.dp),
-                tint = MaterialTheme.colorScheme.primary,
-            )
+            Box(
+                modifier = Modifier
+                    .size(LcxSpacing.iconContainer)
+                    .padding(0.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                androidx.compose.material3.Surface(
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(LcxSpacing.iconContainer)
+                            .padding(10.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.width(LcxSpacing.md))
 

@@ -23,7 +23,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import com.cleanx.lcx.core.ui.LcxTopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -92,7 +92,7 @@ fun ChecklistScreen(
     Scaffold(
         topBar = {
             if (showTopBar) {
-                TopAppBar(
+                LcxTopAppBar(
                     title = {
                         Text(
                             text = "Checklist operativo",

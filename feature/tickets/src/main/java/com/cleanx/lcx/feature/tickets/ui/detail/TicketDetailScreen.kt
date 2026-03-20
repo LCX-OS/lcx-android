@@ -32,7 +32,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import com.cleanx.lcx.core.ui.LcxTopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -97,7 +97,7 @@ fun TicketDetailScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            LcxTopAppBar(
                 title = {
                     Text(
                         ticket?.ticketNumber ?: "Detalle",

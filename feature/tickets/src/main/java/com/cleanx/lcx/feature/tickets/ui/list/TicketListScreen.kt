@@ -23,7 +23,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
+import com.cleanx.lcx.core.ui.LcxTopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -93,7 +93,7 @@ fun TicketListScreen(
     Scaffold(
         topBar = {
             if (showTopBar) {
-                TopAppBar(
+                LcxTopAppBar(
                     title = {
                         Text(
                             "Encargos",

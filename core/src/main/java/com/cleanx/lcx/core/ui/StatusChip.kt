@@ -1,14 +1,12 @@
 package com.cleanx.lcx.core.ui
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -22,7 +20,7 @@ import com.cleanx.lcx.core.theme.LcxStatusReceived
 
 @Composable
 fun StatusChip(status: TicketStatus) {
-    val (label, backgroundColor) = when (status) {
+    val (label, tint) = when (status) {
         TicketStatus.RECEIVED -> "Recibido" to LcxStatusReceived
         TicketStatus.PROCESSING -> "En proceso" to LcxStatusProcessing
         TicketStatus.READY -> "Listo" to LcxStatusReady
@@ -30,17 +28,27 @@ fun StatusChip(status: TicketStatus) {
         TicketStatus.PAID -> "Pagado" to LcxStatusDelivered
     }
 
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(backgroundColor.copy(alpha = 0.15f))
-            .padding(horizontal = LcxSpacing.sm, vertical = LcxSpacing.xs)
-            .semantics { contentDescription = "Estado: $label" },
+    BrandChip(label = label, tint = tint, description = "Estado: $label")
+}
+
+@Composable
+internal fun BrandChip(
+    label: String,
+    tint: Color,
+    description: String,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.semantics { contentDescription = description },
+        shape = MaterialTheme.shapes.small,
+        color = tint.copy(alpha = 0.12f),
+        border = BorderStroke(1.dp, tint.copy(alpha = 0.18f)),
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelMedium,
-            color = backgroundColor,
+            color = tint,
+            modifier = Modifier.padding(horizontal = LcxSpacing.sm, vertical = LcxSpacing.xs),
         )
     }
 }

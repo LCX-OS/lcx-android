@@ -1,6 +1,7 @@
 package com.cleanx.lcx.core.ui
 
-import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,17 +10,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -35,21 +35,8 @@ import com.cleanx.lcx.core.theme.LcxSuccess
 import com.cleanx.lcx.core.theme.LcxTheme
 import com.cleanx.lcx.core.theme.LcxWarning
 
-/**
- * Severity level for [StatusBanner].
- */
 enum class BannerSeverity { Info, Warning, Error, Success }
 
-/**
- * Alert / warning banner used for critical notifications such as low water
- * level or incomplete safety requirements.
- *
- * @param message     Primary message text.
- * @param severity    Visual severity level.
- * @param modifier    Modifier forwarded to the root layout.
- * @param description Optional secondary text with more detail.
- * @param icon        Leading icon; when null a default is chosen based on [severity].
- */
 @Composable
 fun StatusBanner(
     message: String,
@@ -61,12 +48,9 @@ fun StatusBanner(
     val tint = severityColor(severity)
     val resolvedIcon = icon ?: defaultIcon(severity)
 
-    Row(
+    Surface(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(tint.copy(alpha = 0.10f))
-            .padding(LcxSpacing.md)
             .semantics {
                 contentDescription = buildString {
                     append(severityLabel(severity))
@@ -79,30 +63,50 @@ fun StatusBanner(
                 }
                 liveRegion = LiveRegionMode.Polite
             },
-        verticalAlignment = Alignment.Top,
+        color = tint.copy(alpha = 0.12f),
+        contentColor = tint,
+        shape = MaterialTheme.shapes.medium,
+        border = BorderStroke(1.dp, tint.copy(alpha = 0.24f)),
     ) {
-        Icon(
-            imageVector = resolvedIcon,
-            contentDescription = null,
-            modifier = Modifier.size(24.dp),
-            tint = tint,
-        )
+        Row(
+            modifier = Modifier.padding(LcxSpacing.md),
+            verticalAlignment = Alignment.Top,
+        ) {
+            Surface(
+                color = tint.copy(alpha = 0.16f),
+                shape = MaterialTheme.shapes.small,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(LcxSpacing.iconContainer)
+                        .padding(10.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = resolvedIcon,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = tint,
+                    )
+                }
+            }
 
-        Spacer(modifier = Modifier.width(LcxSpacing.sm))
+            Spacer(modifier = Modifier.width(LcxSpacing.md))
 
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = message,
-                style = MaterialTheme.typography.labelLarge,
-                color = tint,
-            )
-            if (description != null) {
-                Spacer(modifier = Modifier.height(LcxSpacing.xs))
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    text = message,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = tint,
                 )
+                if (description != null) {
+                    Spacer(modifier = Modifier.height(LcxSpacing.xs))
+                    Text(
+                        text = description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
             }
         }
     }

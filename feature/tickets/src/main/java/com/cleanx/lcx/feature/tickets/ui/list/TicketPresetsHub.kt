@@ -6,9 +6,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Done
-import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -16,7 +16,7 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import com.cleanx.lcx.core.ui.LcxTopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -53,7 +53,7 @@ private val presetItems = listOf(
     PresetItem(
         label = "Todos",
         description = "Todos los tickets",
-        icon = Icons.Filled.List,
+        icon = Icons.AutoMirrored.Filled.List,
         preset = "all",
     ),
 )
@@ -71,7 +71,7 @@ fun TicketPresetsHub(
     Scaffold(
         modifier = modifier,
         topBar = {
-            TopAppBar(
+            LcxTopAppBar(
                 title = {
                     Text(
                         "Filtros de Tickets",

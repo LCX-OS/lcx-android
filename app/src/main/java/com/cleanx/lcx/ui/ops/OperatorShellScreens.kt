@@ -29,7 +29,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import com.cleanx.lcx.core.ui.LcxTopAppBar
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -61,7 +61,7 @@ fun OperatorShellScreen(
         modifier = modifier,
         topBar = {
             if (showTopBar) {
-                TopAppBar(
+                LcxTopAppBar(
                     title = { Text(text = title) },
                     navigationIcon = {
                         if (showBackButton) {

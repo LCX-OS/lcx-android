@@ -10,7 +10,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import com.cleanx.lcx.core.ui.LcxTopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -34,7 +34,7 @@ fun WaterScreen(
     Scaffold(
         topBar = {
             if (showTopBar) {
-                TopAppBar(
+                LcxTopAppBar(
                     title = {
                         Text(
                             text = "Nivel de Agua",
