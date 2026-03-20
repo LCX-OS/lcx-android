@@ -42,7 +42,7 @@ class ZettlePaymentManager @Inject constructor(
 
         runCatching {
             val sdkConfig = config(context.applicationContext) {
-                isDevMode = buildConfigProvider.isDebug
+                isDevMode = buildConfigProvider.isDebug && !buildConfigProvider.useRealZettle
                 auth {
                     clientId = buildConfigProvider.zettleClientId
                     redirectUrl = buildConfigProvider.zettleRedirectUrl
