@@ -489,15 +489,27 @@ private class BrotherSdkBridge private constructor(
 
         fun loadOrNull(): BrotherSdkBridge? {
             return runCatching {
+                val printSettingsClass = loadClass(
+                    "com.brother.sdk.lmprinter.PrintSettings",
+                    "com.brother.sdk.lmprinter.setting.PrintSettings",
+                )
+                val qlPrintSettingsClass = loadClass(
+                    "com.brother.sdk.lmprinter.QLPrintSettings",
+                    "com.brother.sdk.lmprinter.setting.QLPrintSettings",
+                )
+                val qlLabelSizeClass = loadClass(
+                    "com.brother.sdk.lmprinter.QLPrintSettings\$LabelSize",
+                    "com.brother.sdk.lmprinter.setting.QLPrintSettings\$LabelSize",
+                )
                 BrotherSdkBridge(
                     channelClass = Class.forName("com.brother.sdk.lmprinter.Channel"),
                     printerSearcherClass = Class.forName("com.brother.sdk.lmprinter.PrinterSearcher"),
                     networkSearchOptionClass = Class.forName("com.brother.sdk.lmprinter.NetworkSearchOption"),
                     printerDriverGeneratorClass = Class.forName("com.brother.sdk.lmprinter.PrinterDriverGenerator"),
                     printerModelClass = Class.forName("com.brother.sdk.lmprinter.PrinterModel"),
-                    printSettingsClass = Class.forName("com.brother.sdk.lmprinter.PrintSettings"),
-                    qlPrintSettingsClass = Class.forName("com.brother.sdk.lmprinter.QLPrintSettings"),
-                    qlLabelSizeClass = Class.forName("com.brother.sdk.lmprinter.QLPrintSettings\$LabelSize"),
+                    printSettingsClass = printSettingsClass,
+                    qlPrintSettingsClass = qlPrintSettingsClass,
+                    qlLabelSizeClass = qlLabelSizeClass,
                 )
             }.onFailure { error ->
                 Timber.tag("BROTHER").w(
@@ -505,6 +517,18 @@ private class BrotherSdkBridge private constructor(
                     "Brother SDK reflection bridge unavailable. Add BrotherPrintLibrary.aar to feature/printing/libs",
                 )
             }.getOrNull()
+        }
+
+        private fun loadClass(vararg candidates: String): Class<*> {
+            var lastError: Throwable? = null
+            for (name in candidates) {
+                try {
+                    return Class.forName(name)
+                } catch (error: Throwable) {
+                    lastError = error
+                }
+            }
+            throw lastError ?: ClassNotFoundException(candidates.joinToString())
         }
     }
 }

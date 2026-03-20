@@ -28,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -98,11 +99,14 @@ import com.cleanx.lcx.ui.ops.SuppliesLabelsShell
 import com.cleanx.lcx.ui.ops.SuppliesReportsShell
 import com.cleanx.lcx.ui.ops.VacationsShell
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 private data class DrawerItem(
     val label: String,
     val target: Screen,
 )
+
+private const val KEY_TICKET_REFRESH = "ticket_refresh"
 
 /**
  * Post-login shell with:
@@ -389,6 +393,17 @@ fun MainScaffold(
                     composable<Screen.TicketDetail> { backStackEntry ->
                         val detailViewModel: TicketDetailViewModel = hiltViewModel()
                         val route = backStackEntry.toRoute<Screen.TicketDetail>()
+                        val shouldRefresh by backStackEntry.savedStateHandle
+                            .getStateFlow(KEY_TICKET_REFRESH, false)
+                            .collectAsState()
+
+                        LaunchedEffect(shouldRefresh) {
+                            if (shouldRefresh) {
+                                detailViewModel.loadTicket(force = true)
+                                ticketListViewModel.refresh()
+                                backStackEntry.savedStateHandle[KEY_TICKET_REFRESH] = false
+                            }
+                        }
 
                         val ticketId = detailViewModel.ticketId
                         val existingTicket = remember(ticketId) {
@@ -411,7 +426,17 @@ fun MainScaffold(
                                 tabNavController.popBackStack()
                             },
                             onCharge = { id ->
-                                tabNavController.navigate(Screen.Charge(ticketId = id))
+                                val ticket = detailViewModel.uiState.value.ticket
+                                    ?: ticketListViewModel.uiState.value.tickets.firstOrNull { it.id == id }
+                                val amount = ticket?.totalAmount ?: 0.0
+                                val customerName = ticket?.customerName.orEmpty()
+                                tabNavController.navigate(
+                                    Screen.Charge(
+                                        ticketId = id,
+                                        amount = String.format(Locale.US, "%.2f", amount),
+                                        customerName = customerName,
+                                    ),
+                                )
                             },
                             onPrint = { id ->
                                 tabNavController.navigate(Screen.Print(ticketId = id))
@@ -421,8 +446,16 @@ fun MainScaffold(
 
                     composable<Screen.Charge> {
                         ChargeScreen(
-                            onNavigateBack = { tabNavController.popBackStack() },
+                            onNavigateBack = {
+                                tabNavController.previousBackStackEntry
+                                    ?.savedStateHandle
+                                    ?.set(KEY_TICKET_REFRESH, true)
+                                tabNavController.popBackStack()
+                            },
                             onNavigateToPrint = { ticketId ->
+                                tabNavController.previousBackStackEntry
+                                    ?.savedStateHandle
+                                    ?.set(KEY_TICKET_REFRESH, true)
                                 tabNavController.navigate(Screen.Print(ticketId = ticketId))
                             },
                         )
@@ -443,6 +476,9 @@ fun MainScaffold(
                             initialLabelData = initialLabelData,
                             viewModel = printViewModel,
                             onFinished = {
+                                tabNavController.previousBackStackEntry
+                                    ?.savedStateHandle
+                                    ?.set(KEY_TICKET_REFRESH, true)
                                 tabNavController.popBackStack()
                             },
                         )
