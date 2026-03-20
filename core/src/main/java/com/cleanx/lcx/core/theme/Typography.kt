@@ -2,31 +2,22 @@ package com.cleanx.lcx.core.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import com.cleanx.lcx.core.R
 
-private val LcxDisplayFontFamily = FontFamily(
-    Font(R.font.nexa_extralight, FontWeight.Light),
-    Font(R.font.nexa_extralight, FontWeight.Normal),
-    Font(R.font.nexa_heavy, FontWeight.SemiBold),
-    Font(R.font.nexa_heavy, FontWeight.Bold),
-    Font(R.font.nexa_heavy, FontWeight.ExtraBold),
-)
-
-private val LcxEditorialFontFamily = FontFamily(
-    Font(R.font.baskerville_regular, FontWeight.Normal),
-    Font(R.font.baskerville_regular, FontWeight.Medium),
-    Font(R.font.baskerville_semibold_italic, FontWeight.SemiBold, style = FontStyle.Italic),
-)
+private val LcxDisplayFontFamily = FontFamily.SansSerif
+private val LcxEditorialFontFamily = FontFamily.Serif
 
 /**
  * Typography mapped from the Clean X brand kit.
- * - Nexa drives titles, labels, and primary actions.
- * - Baskerville supports editorial and descriptive copy.
+ *
+ * The original PDF only contained subset-embedded fonts, which are not safe to
+ * ship as app resources because many glyphs render incorrectly on Android.
+ * Until design provides the licensed source font files, we use stable platform
+ * families that preserve the intended hierarchy: clean sans titles plus an
+ * editorial serif for longer reading text.
  */
 val LcxTypography = Typography(
     displayLarge = TextStyle(
