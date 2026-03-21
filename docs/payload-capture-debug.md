@@ -7,12 +7,22 @@ Este flujo captura payloads HTTP reales (request/response) de:
 
 Se guarda en el dispositivo en:
 
-- `/sdcard/Android/data/com.cleanx.lcx.dev/files/payload-capture/payload-capture.jsonl`
+- `/sdcard/Android/data/<dev applicationId>/files/payload-capture/payload-capture.jsonl`
+
+Package default si no sobreescribes `LCX_ANDROID_APPLICATION_ID` ni `LCX_DEV_APPLICATION_ID_SUFFIX`:
+
+- `com.cleanx.lcx.dev`
 
 ## Uso rapido
 
 1. Instala/abre `devDebug` y ejecuta el flujo que quieras inspeccionar (login, ticket, payment, etc.).
 2. Extrae el archivo:
+
+```bash
+./scripts/qa/pull-payload-captures.sh <dev applicationId>
+```
+
+Ejemplo con el default actual:
 
 ```bash
 ./scripts/qa/pull-payload-captures.sh com.cleanx.lcx.dev

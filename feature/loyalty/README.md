@@ -2,25 +2,13 @@
 
 Android data-layer module for Loyalty API consumption via Retrofit.
 
-## Usage
+Este modulo concentra contratos de red, DTOs y `LoyaltyRepository`. No define navegacion ni pantallas; otras features consumen el repositorio por DI.
 
-Inject `LoyaltyRepository` in any ViewModel:
+## Public surface
 
-```kotlin
-@HiltViewModel
-class LoyaltyViewModel @Inject constructor(
-    private val loyaltyRepository: LoyaltyRepository,
-) : ViewModel() {
-    fun earnVisit(accountId: String) = viewModelScope.launch {
-        loyaltyRepository.earnPoints(
-            accountId = accountId,
-            sourceType = LoyaltySourceType.VISIT,
-            sourceRefId = "android-${System.currentTimeMillis()}",
-            quantity = 1.0,
-        )
-    }
-}
-```
+- `LoyaltyRepository`
+- modelos y mapeos de loyalty en este modulo
+- integracion HTTP hacia los endpoints listados abajo
 
 ## Endpoints wired
 

@@ -1,5 +1,7 @@
 # Android Native Feature Gate vs PWA
 
+Documento canonico del estado de parity/porting. Los wave reports y snapshots fechados viven en `docs/archive/porting/20260303/`.
+
 Fecha de corte: 2026-03-13
 Workspace: `/Users/diegolden/Code/LCX`
 PWA source of truth: `/Users/diegolden/Code/LCX/v0-lcx-pwa`

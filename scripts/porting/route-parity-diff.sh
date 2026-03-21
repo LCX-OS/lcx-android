@@ -7,7 +7,7 @@ PWA_ROOT="${PWA_ROOT:-/Users/diegolden/Code/LCX/v0-lcx-pwa}"
 
 DATE_TAG="$(date +%Y%m%d)"
 NOW_HUMAN="$(date '+%Y-%m-%d %H:%M:%S %Z')"
-OUT_DIR="$ANDROID_ROOT/docs/porting/worktree-support"
+OUT_DIR="$ANDROID_ROOT/docs/archive/porting/generated"
 OUT_FILE="$OUT_DIR/route-parity-diff-$DATE_TAG.md"
 
 mkdir -p "$OUT_DIR"

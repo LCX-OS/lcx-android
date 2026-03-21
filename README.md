@@ -4,10 +4,12 @@ Aplicacion nativa Android para operacion de sucursal (canal de campo), construid
 
 ## Estado del repositorio
 
-- `README.md` (este archivo): guia practica para desarrollo, QA en device y release.
+- `README.md` (este archivo): guia practica para desarrollo local, flavors, comandos y release entrypoint.
+- `docs/README.md`: indice de documentacion y mapa de archivo historico.
+- `docs/android-release.md`: flujo canonico para signing y `:app:assembleProdRelease`.
 - `docs/api-contract-spec.md`: contrato API para cliente Android.
-- `docs/qa-physical-device-report-20260302.md`: evidencia de QA fisico por USB.
-- `docs/porting/`: inventario de features PWA, matriz de paridad y backlog de porteo.
+- `docs/porting/README.md`: fuente actual para parity/porting y `route-registry.json`.
+- `docs/evidence/`: evidencia operativa fechada (payload captures, smoke logs, notas de debugging).
 
 ## Estrategia de plataforma (alineada al PWA)
 
@@ -110,12 +112,12 @@ Definicion en `app/build.gradle.kts`:
 
 - `dev`
   - `API_BASE_URL` y `SUPABASE_*` desde env/gradle property.
-  - `USE_REAL_ZETTLE=false` (stub de pagos en dev).
-  - `USE_REAL_BROTHER` configurable por `LCX_DEV_USE_REAL_BROTHER`.
-- `staging`
-  - placeholders de ejemplo, requiere valores reales antes de uso.
+  - `USE_REAL_ZETTLE=false` y `USE_REAL_BROTHER=false` por default.
+  - se puede usar con hardware real para smoke local si activas los flags manualmente.
 - `prod`
-  - placeholders de ejemplo, requiere valores reales antes de release.
+  - `API_BASE_URL`, `SUPABASE_*` y flags desde env/gradle properties.
+  - `USE_REAL_ZETTLE=true` y `USE_REAL_BROTHER=true` son obligatorios.
+  - `verifyProdConfig` falla si faltan valores reales, si queda algun placeholder, si el `applicationId` no coincide con el aprobado por Zettle o si falta el AAR de Brother.
 
 Variables soportadas:
 
@@ -123,20 +125,36 @@ Variables soportadas:
 - `LCX_DEV_NOTIFICATIONS_BASE_URL`
 - `LCX_DEV_SUPABASE_URL`
 - `LCX_DEV_SUPABASE_ANON_KEY`
+- `LCX_DEV_APPLICATION_ID_SUFFIX`
+- `LCX_DEV_USE_REAL_ZETTLE`
 - `LCX_DEV_USE_REAL_BROTHER`
+- `LCX_ANDROID_APPLICATION_ID`
+- `LCX_PROD_API_BASE_URL`
+- `LCX_PROD_NOTIFICATIONS_BASE_URL`
+- `LCX_PROD_SUPABASE_URL`
+- `LCX_PROD_SUPABASE_ANON_KEY`
+- `LCX_PROD_USE_REAL_ZETTLE`
+- `LCX_PROD_USE_REAL_BROTHER`
+- `LCX_ZETTLE_GITHUB_TOKEN`
+- `LCX_ZETTLE_CLIENT_ID`
+- `LCX_ZETTLE_REDIRECT_URL`
+- `LCX_ZETTLE_APPROVED_APPLICATION_ID`
 
 ## Brother SDK (impresion real)
 
-Para impresion real Brother en `dev`:
+Ruta esperada del AAR real:
 
-1. Coloca el AAR en:
-   - `feature/printing/libs/BrotherPrintLibrary.aar`
-2. Exporta:
-   - `LCX_DEV_USE_REAL_BROTHER=true`
-3. Reinstala:
-   - `./gradlew :app:installDevDebug`
+- `feature/printing/libs/BrotherPrintLibrary.aar`
 
-Si el AAR no existe, la app compila y usa fallback/stub (sin impresion real).
+Uso:
+
+1. `dev`
+   - exporta `LCX_DEV_USE_REAL_BROTHER=true`
+   - reinstala con `./gradlew :app:installDevDebug`
+2. `prod`
+   - el AAR es obligatorio; `:app:verifyProdConfig` falla si falta
+
+Si el AAR no existe, `dev` puede seguir compilando con fallback/stub. `prod` no.
 
 ## Comandos importantes
 
@@ -153,6 +171,18 @@ Si el AAR no existe, la app compila y usa fallback/stub (sin impresion real).
 # Suite de tests (todos los modulos)
 ./gradlew test
 ```
+
+## Release Android firmado
+
+- Solo existen dos ambientes: `dev` y `prod`.
+- El artefacto principal de release es el APK firmado de `./gradlew :app:assembleProdRelease --console=plain`.
+- La distribucion por defecto es APK firmado por canal interno controlado; Play/AAB queda como opcion secundaria.
+- Valida ambiente y signing con `./gradlew :app:verifyProdConfig :app:verifyReleaseSigning --console=plain`.
+- El `release` signing se configura fuera de git con `~/.gradle/gradle.properties` o `key.properties` local.
+- Guia operativa y checklist detallado: `docs/android-release.md`.
+- `./gradlew :app:bundleProdRelease --console=plain` puede seguir usandose si luego necesitas Play Console o Internal App Sharing, pero no es el flujo principal.
+- Para `prodRelease` con Zettle real, mantén `LCX_ANDROID_APPLICATION_ID=com.cleanx.app`.
+- `LCX_ZETTLE_GITHUB_TOKEN` solo hace falta cuando esta maquina necesita volver a resolver el SDK privado de Zettle desde GitHub Packages.
 
 Scripts utiles:
 
@@ -203,7 +233,7 @@ adb logcat -v threadtime | rg -i "TXN|HTTP|TICKET|PAYMENT|PRINT|AUTH|WATER|CHECK
 - Resume tras kill app (`resumeTransaction`).
 - Caso `OPENING_CHECKLIST_BLOCKING_OPERATION` (409) con mensaje claro.
 
-Reporte base: `docs/qa-physical-device-report-20260302.md`.
+La evidencia viva queda en `docs/evidence/`; los reportes narrativos fechados quedaron archivados en `docs/archive/qa/`.
 
 ## Checklist de salida (release gate)
 
@@ -212,12 +242,10 @@ Reporte base: `docs/qa-physical-device-report-20260302.md`.
 - [ ] QA fisico P0 actualizado con evidencia de logs/comandos.
 - [ ] Contratos criticos de tickets sin drift contra `docs/api-contract-spec.md`.
 - [ ] Verificacion de flags hardware por ambiente (`USE_REAL_*`).
-- [ ] Matriz de paridad actualizada (`docs/porting/parity-matrix-*.md`).
+- [ ] Gate de parity/porting actualizado en `docs/porting/native-feature-gate.md` y/o `docs/porting/route-registry.json`.
 
 ## Documentacion recomendada para porteo
 
-- `docs/porting/pwa-feature-inventory-20260303.md`
-- `docs/porting/parity-matrix-20260303.md`
-- `docs/porting/route-subagent-backlog-20260303.md`
-- `docs/porting/android-port-wave-report-20260303.md`
-- `docs/porting/caja-wave-report-20260303.md`
+- `docs/porting/README.md`
+- `docs/porting/native-feature-gate.md`
+- `scripts/porting/verify-parity.sh`

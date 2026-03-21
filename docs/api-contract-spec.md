@@ -27,7 +27,7 @@
 
 The LCX API provides endpoints for managing laundry service tickets. This specification documents the contract for the three critical ticket management endpoints used by the Android client.
 
-**Base URL:** To be configured per environment (staging/production)
+**Base URL:** To be configured per environment (`dev`/`prod`)
 
 ### Key Principles
 
