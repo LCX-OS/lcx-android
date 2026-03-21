@@ -1,0 +1,8 @@
+# Copy this file to key.properties (gitignored) or move the same keys to ~/.gradle/gradle.properties.
+# These values are used by :app:assembleProdRelease.
+# Keep the keystore itself outside git.
+
+LCX_RELEASE_STORE_FILE=/absolute/path/to/lcx-upload.jks
+LCX_RELEASE_STORE_PASSWORD=change-me
+LCX_RELEASE_KEY_ALIAS=lcxupload
+LCX_RELEASE_KEY_PASSWORD=change-me
