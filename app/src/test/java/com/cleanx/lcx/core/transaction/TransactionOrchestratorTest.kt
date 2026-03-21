@@ -72,6 +72,7 @@ class TransactionOrchestratorTest {
 
         // Default: printRepository.getSelectedPrinter returns null (no printer selected in tests)
         every { printRepository.getSelectedPrinter() } returns null
+        every { printRepository.isConnected() } returns false
 
         orchestrator = TransactionOrchestrator(
             ticketRepository, paymentRepository, printRepository, persistence,
