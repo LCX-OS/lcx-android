@@ -54,6 +54,9 @@ import com.cleanx.lcx.core.ui.ErrorState
 import com.cleanx.lcx.core.ui.LcxButton
 import com.cleanx.lcx.core.ui.LcxCard
 import com.cleanx.lcx.core.ui.LcxConfirmationDialog
+import com.cleanx.lcx.core.ui.LcxQuantityStepper
+import com.cleanx.lcx.core.ui.LcxStepHeader
+import com.cleanx.lcx.core.ui.LcxStickyActionBar
 import com.cleanx.lcx.core.ui.LcxTextField
 import com.cleanx.lcx.feature.tickets.data.AddOnCatalogRecord
 import com.cleanx.lcx.feature.tickets.data.CustomerRecord
@@ -155,6 +158,31 @@ fun CreateTicketScreen(
                 },
             )
         },
+        bottomBar = {
+            AnimatedVisibility(visible = !showSuccess) {
+                LcxStickyActionBar {
+                    Column(verticalArrangement = Arrangement.spacedBy(LcxSpacing.xs)) {
+                        Text(
+                            text = "Total",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = formatCurrency(state.pricing.total),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                    LcxButton(
+                        text = "Confirmar encargo",
+                        onClick = viewModel::submit,
+                        isLoading = state.isSubmitting,
+                        enabled = !state.isLoadingCatalogs && !state.customer.isSaving,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+        },
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize()) {
             AnimatedVisibility(
@@ -212,6 +240,14 @@ fun CreateTicketScreen(
                             }
 
                             item {
+                                LcxStepHeader(
+                                    step = 1,
+                                    title = "Cliente",
+                                    summary = "Datos del encargo",
+                                )
+                            }
+
+                            item {
                                 CustomerSection(
                                     state = state,
                                     onSearchQueryChanged = viewModel::onCustomerSearchQueryChanged,
@@ -224,6 +260,14 @@ fun CreateTicketScreen(
                                     onCustomerEmailChanged = viewModel::onCustomerEmailChanged,
                                     onCustomerNotesChanged = viewModel::onCustomerNotesChanged,
                                     onCreateCustomer = viewModel::createCustomer,
+                                )
+                            }
+
+                            item {
+                                LcxStepHeader(
+                                    step = 2,
+                                    title = "Servicio",
+                                    summary = "Peso, entrega, extras y productos",
                                 )
                             }
 
@@ -275,6 +319,14 @@ fun CreateTicketScreen(
                             }
 
                             item {
+                                LcxStepHeader(
+                                    step = 3,
+                                    title = "Pago y resumen",
+                                    summary = "Total y estado de pago",
+                                )
+                            }
+
+                            item {
                                 PaymentSection(
                                     state = state,
                                     onChoiceChanged = viewModel::onPaymentChoiceChanged,
@@ -286,14 +338,19 @@ fun CreateTicketScreen(
                                 SummarySection(state = state)
                             }
 
-                            item {
-                                SubmitSection(
-                                    state = state,
-                                    onSubmit = viewModel::submit,
-                                )
+                            state.error?.let { message ->
+                                item {
+                                    LcxCard {
+                                        Text(
+                                            text = message,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.error,
+                                        )
+                                    }
+                                }
                             }
 
-                            item { Spacer(modifier = Modifier.height(80.dp)) }
+                            item { Spacer(modifier = Modifier.height(112.dp)) }
                         }
                     }
                 }
@@ -979,28 +1036,12 @@ private fun QuantityRow(
                 )
             }
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(LcxSpacing.xs),
-            ) {
-                TextButton(
-                    onClick = onDecrease,
-                    enabled = enabled && quantity > 0,
-                ) {
-                    Text("-")
-                }
-                Text(
-                    text = quantity.toString(),
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(horizontal = LcxSpacing.xs),
-                )
-                TextButton(
-                    onClick = onIncrease,
-                    enabled = enabled,
-                ) {
-                    Text("+")
-                }
-            }
+            LcxQuantityStepper(
+                quantity = quantity,
+                enabled = enabled,
+                onDecrease = onDecrease,
+                onIncrease = onIncrease,
+            )
         }
     }
 }

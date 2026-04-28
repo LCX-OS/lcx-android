@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,7 +16,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.AddTask
-import androidx.compose.material.icons.outlined.Checklist
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.LocalLaundryService
 import androidx.compose.material.icons.outlined.WaterDrop
@@ -37,14 +37,16 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.cleanx.lcx.core.operational.OperatorOperationalAction
 import com.cleanx.lcx.core.theme.LcxError
 import com.cleanx.lcx.core.model.TicketStatus
 import com.cleanx.lcx.core.theme.LcxSpacing
 import com.cleanx.lcx.core.theme.LcxSuccess
 import com.cleanx.lcx.core.theme.LcxWarning
 import com.cleanx.lcx.core.ui.ErrorState
+import com.cleanx.lcx.core.ui.LcxActionCard
 import com.cleanx.lcx.core.ui.LcxCard
-import com.cleanx.lcx.core.ui.QuickActionCard
+import com.cleanx.lcx.core.ui.LcxStatusPill
 
 @Composable
 fun DashboardScreen(
@@ -52,7 +54,9 @@ fun DashboardScreen(
     onOpenChecklist: () -> Unit,
     onOpenWater: () -> Unit,
     onOpenCash: () -> Unit,
+    onOpenSales: () -> Unit,
     onOpenCreateTicket: () -> Unit,
+    onOpenTickets: () -> Unit,
     onOpenTicket: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -99,7 +103,9 @@ fun DashboardScreen(
                 onOpenChecklist = onOpenChecklist,
                 onOpenWater = onOpenWater,
                 onOpenCash = onOpenCash,
+                onOpenSales = onOpenSales,
                 onOpenCreateTicket = onOpenCreateTicket,
+                onOpenTickets = onOpenTickets,
                 onOpenTicket = onOpenTicket,
                 modifier = modifier,
             )
@@ -116,7 +122,9 @@ private fun DashboardContent(
     onOpenChecklist: () -> Unit,
     onOpenWater: () -> Unit,
     onOpenCash: () -> Unit,
+    onOpenSales: () -> Unit,
     onOpenCreateTicket: () -> Unit,
+    onOpenTickets: () -> Unit,
     onOpenTicket: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -129,31 +137,35 @@ private fun DashboardContent(
         item { Spacer(modifier = Modifier.height(LcxSpacing.xs)) }
 
         item {
-            HeroCard(
+            NextActionCard(
                 snapshot = snapshot,
                 isRefreshing = isRefreshing,
                 globalError = globalError,
                 onRefresh = onRefresh,
+                onOpenChecklist = onOpenChecklist,
+                onOpenWater = onOpenWater,
+                onOpenCash = onOpenCash,
             )
+        }
+
+        item {
+            RoutineStatusSection(snapshot.routine)
         }
 
         item {
             QuickActionsSection(
-                onOpenChecklist = onOpenChecklist,
                 onOpenWater = onOpenWater,
                 onOpenCash = onOpenCash,
+                onOpenSales = onOpenSales,
                 onOpenCreateTicket = onOpenCreateTicket,
             )
-        }
-
-        item {
-            RoutineSection(snapshot.routine)
         }
 
         item {
             PendingTicketsSection(
                 section = snapshot.pendingTickets,
                 onOpenCreateTicket = onOpenCreateTicket,
+                onOpenTickets = onOpenTickets,
                 onOpenTicket = onOpenTicket,
             )
         }
@@ -167,62 +179,74 @@ private fun DashboardContent(
 }
 
 @Composable
-private fun HeroCard(
+private fun NextActionCard(
     snapshot: DashboardSnapshot,
     isRefreshing: Boolean,
     globalError: String?,
     onRefresh: () -> Unit,
+    onOpenChecklist: () -> Unit,
+    onOpenWater: () -> Unit,
+    onOpenCash: () -> Unit,
 ) {
+    val next = snapshot.operationalSummary.toNextAction()
     LcxCard {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top,
-        ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(LcxSpacing.xs),
-            ) {
+        Column(verticalArrangement = Arrangement.spacedBy(LcxSpacing.sm)) {
+            Text(
+                text = "Siguiente accion",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                text = next.title,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = next.description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = listOfNotNull(
+                    snapshot.operatorName,
+                    snapshot.branchName?.let { "Sucursal: $it" },
+                ).joinToString(" · "),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            globalError?.let { message ->
                 Text(
-                    text = "Centro operativo",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Text(
-                    text = snapshot.operatorName,
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                snapshot.branchName?.let { branch ->
-                    Text(
-                        text = "Sucursal: $branch",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Text(
-                    text = snapshot.operationalSummary.headline,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                )
-                Text(
-                    text = snapshot.operationalSummary.recommendation,
+                    text = message,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.error,
                 )
-                globalError?.let { message ->
-                    Text(
-                        text = message,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
             }
-
-            TextButton(
-                onClick = onRefresh,
-                enabled = !isRefreshing,
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(LcxSpacing.sm),
             ) {
-                Text(if (isRefreshing) "Actualizando..." else "Actualizar")
+                com.cleanx.lcx.core.ui.LcxButton(
+                    text = next.ctaLabel,
+                    onClick = {
+                        when (next.action) {
+                            OperatorOperationalAction.OPEN_ENTRY_CHECKLIST,
+                            OperatorOperationalAction.OPEN_EXIT_CHECKLIST,
+                            -> onOpenChecklist()
+                            OperatorOperationalAction.OPEN_WATER -> onOpenWater()
+                            OperatorOperationalAction.OPEN_CASH -> onOpenCash()
+                            null -> onRefresh()
+                        }
+                    },
+                    modifier = Modifier.weight(1f),
+                    enabled = !isRefreshing,
+                    isLoading = isRefreshing && next.action == null,
+                )
+                TextButton(
+                    onClick = onRefresh,
+                    enabled = !isRefreshing,
+                ) {
+                    Text(if (isRefreshing) "..." else "Refrescar")
+                }
             }
         }
     }
@@ -230,9 +254,9 @@ private fun HeroCard(
 
 @Composable
 private fun QuickActionsSection(
-    onOpenChecklist: () -> Unit,
     onOpenWater: () -> Unit,
     onOpenCash: () -> Unit,
+    onOpenSales: () -> Unit,
     onOpenCreateTicket: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(LcxSpacing.sm)) {
@@ -247,19 +271,19 @@ private fun QuickActionsSection(
             horizontalArrangement = Arrangement.spacedBy(LcxSpacing.sm),
         ) {
             Box(modifier = Modifier.weight(1f)) {
-                QuickActionCard(
-                    icon = Icons.Outlined.Checklist,
-                    title = "Checklist entrada",
-                    description = "Arranque operativo del turno",
-                    onClick = onOpenChecklist,
+                LcxActionCard(
+                    icon = Icons.Outlined.AddTask,
+                    title = "Nuevo encargo",
+                    description = "Ticket de mostrador",
+                    onClick = onOpenCreateTicket,
                 )
             }
             Box(modifier = Modifier.weight(1f)) {
-                QuickActionCard(
-                    icon = Icons.Outlined.WaterDrop,
-                    title = "Agua",
-                    description = "Registrar el nivel del tanque",
-                    onClick = onOpenWater,
+                LcxActionCard(
+                    icon = Icons.Outlined.LocalLaundryService,
+                    title = "Ventas",
+                    description = "Autoservicio y productos",
+                    onClick = onOpenSales,
                 )
             }
         }
@@ -269,7 +293,7 @@ private fun QuickActionsSection(
             horizontalArrangement = Arrangement.spacedBy(LcxSpacing.sm),
         ) {
             Box(modifier = Modifier.weight(1f)) {
-                QuickActionCard(
+                LcxActionCard(
                     icon = Icons.AutoMirrored.Outlined.ReceiptLong,
                     title = "Caja",
                     description = "Apertura, gastos y corte",
@@ -277,11 +301,30 @@ private fun QuickActionsSection(
                 )
             }
             Box(modifier = Modifier.weight(1f)) {
-                QuickActionCard(
-                    icon = Icons.Outlined.AddTask,
-                    title = "Nuevo encargo",
-                    description = "Registrar ticket de mostrador",
-                    onClick = onOpenCreateTicket,
+                LcxActionCard(
+                    icon = Icons.Outlined.WaterDrop,
+                    title = "Agua",
+                    description = "Nivel y pedido",
+                    onClick = onOpenWater,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RoutineStatusSection(section: DashboardRoutineSection) {
+    LcxCard(title = "Rutina del dia") {
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(LcxSpacing.sm),
+            verticalArrangement = Arrangement.spacedBy(LcxSpacing.sm),
+        ) {
+            (section.entryGroup.items + section.exitGroup.items).forEach { item ->
+                LcxStatusPill(
+                    label = "${item.title}: ${routineStateLabel(item.state)}",
+                    tint = routineStateColor(item.state),
+                    description = "${item.title}: ${item.detail}",
                 )
             }
         }
@@ -294,6 +337,25 @@ private fun RoutineSection(section: DashboardRoutineSection) {
         RoutineGroupCard(section.entryGroup)
         Spacer(modifier = Modifier.height(LcxSpacing.sm))
         RoutineGroupCard(section.exitGroup)
+    }
+}
+
+@Composable
+private fun routineStateColor(state: DashboardRoutineState): Color {
+    return when (state) {
+        DashboardRoutineState.DONE -> LcxSuccess
+        DashboardRoutineState.IN_PROGRESS -> LcxWarning
+        DashboardRoutineState.PENDING -> MaterialTheme.colorScheme.primary
+        DashboardRoutineState.BLOCKING -> LcxError
+    }
+}
+
+private fun routineStateLabel(state: DashboardRoutineState): String {
+    return when (state) {
+        DashboardRoutineState.DONE -> "OK"
+        DashboardRoutineState.IN_PROGRESS -> "En curso"
+        DashboardRoutineState.PENDING -> "Pendiente"
+        DashboardRoutineState.BLOCKING -> "Bloquea"
     }
 }
 
@@ -382,6 +444,7 @@ private fun RoutineRow(item: DashboardRoutineItem) {
 private fun PendingTicketsSection(
     section: DashboardPendingTicketsSection,
     onOpenCreateTicket: () -> Unit,
+    onOpenTickets: () -> Unit,
     onOpenTicket: (String) -> Unit,
 ) {
     LcxCard(title = "Tickets pendientes") {
@@ -430,6 +493,10 @@ private fun PendingTicketsSection(
                     if (index != section.items.lastIndex) {
                         HorizontalDivider(modifier = Modifier.padding(vertical = LcxSpacing.sm))
                     }
+                }
+                Spacer(modifier = Modifier.height(LcxSpacing.sm))
+                TextButton(onClick = onOpenTickets) {
+                    Text("Ver todos")
                 }
             }
         }

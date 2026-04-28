@@ -29,6 +29,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.heading
@@ -39,6 +42,7 @@ import com.cleanx.lcx.core.theme.LcxSpacing
 import com.cleanx.lcx.core.ui.EmptyState
 import com.cleanx.lcx.core.ui.ErrorState
 import com.cleanx.lcx.core.ui.LcxCard
+import com.cleanx.lcx.core.ui.LcxTextField
 import com.cleanx.lcx.core.ui.PaymentStatusChip
 import com.cleanx.lcx.core.ui.StatusChip
 
@@ -59,6 +63,7 @@ fun TicketListScreen(
     showTopBar: Boolean = true,
 ) {
     val state by viewModel.uiState.collectAsState()
+    var query by rememberSaveable { mutableStateOf("") }
     val shortcuts = remember(state.tickets) {
         listOf(
             TicketPresetShortcut(
@@ -88,6 +93,9 @@ fun TicketListScreen(
                 count = state.tickets.size,
             ),
         )
+    }
+    val filteredTickets = remember(state.tickets, query) {
+        filterTicketsForQuery(state.tickets, query)
     }
 
     Scaffold(
@@ -132,6 +140,13 @@ fun TicketListScreen(
                 verticalArrangement = Arrangement.spacedBy(LcxSpacing.sm),
             ) {
                 item { Spacer(modifier = Modifier.height(LcxSpacing.sm)) }
+                item {
+                    LcxTextField(
+                        value = query,
+                        onValueChange = { query = it },
+                        label = "Buscar folio, cliente o servicio",
+                    )
+                }
                 item {
                     LcxCard(title = "Vistas rápidas") {
                         Text(
@@ -198,8 +213,17 @@ fun TicketListScreen(
                         }
                     }
 
+                    filteredTickets.isEmpty() -> {
+                        item {
+                            EmptyState(
+                                title = "Sin resultados",
+                                description = "No hay encargos que coincidan con la busqueda.",
+                            )
+                        }
+                    }
+
                     else -> {
-                        items(state.tickets, key = { it.id }) { ticket ->
+                        items(filteredTickets, key = { it.id }) { ticket ->
                             TicketListItem(
                                 ticket = ticket,
                                 onClick = { onTicketClick(ticket) },
@@ -210,6 +234,23 @@ fun TicketListScreen(
                 item { Spacer(modifier = Modifier.height(80.dp)) }
             }
         }
+    }
+}
+
+private fun filterTicketsForQuery(
+    tickets: List<Ticket>,
+    query: String,
+): List<Ticket> {
+    val normalized = query.trim().lowercase()
+    if (normalized.isBlank()) return tickets
+
+    return tickets.filter { ticket ->
+        listOfNotNull(
+            ticket.ticketNumber,
+            ticket.customerName,
+            ticket.customerPhone,
+            ticket.service,
+        ).any { value -> value.lowercase().contains(normalized) }
     }
 }
 

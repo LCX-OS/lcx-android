@@ -63,4 +63,20 @@ class DashboardModelsTest {
         assertEquals(DashboardRoutineState.BLOCKING, blockingTask.toDashboardRoutineState())
         assertEquals(DashboardRoutineState.IN_PROGRESS, inProgressTask.toDashboardRoutineState())
     }
+
+    @Test
+    fun `operational summary maps to next dashboard action`() {
+        val summary = com.cleanx.lcx.core.operational.OperatorOperationalSummary(
+            status = OperatorOperationalStatus.BLOCKING,
+            headline = "Hay tareas obligatorias",
+            recommendation = "Registrar nivel de agua",
+            nextAction = OperatorOperationalAction.OPEN_WATER,
+        ).toDashboardOperationalSummary()
+
+        val next = summary.toNextAction()
+
+        assertEquals("Registrar agua", next.title)
+        assertEquals("Registrar nivel de agua", next.ctaLabel)
+        assertEquals(OperatorOperationalAction.OPEN_WATER, next.action)
+    }
 }

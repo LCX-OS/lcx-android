@@ -19,7 +19,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -59,6 +58,7 @@ import com.cleanx.lcx.core.ui.ButtonVariant
 import com.cleanx.lcx.core.ui.ErrorState
 import com.cleanx.lcx.core.ui.LcxButton
 import com.cleanx.lcx.core.ui.LcxCard
+import com.cleanx.lcx.core.ui.LcxStickyActionBar
 import com.cleanx.lcx.core.ui.LcxTextField
 import com.cleanx.lcx.core.ui.PaymentStatusChip
 import com.cleanx.lcx.core.ui.StatusChip
@@ -441,40 +441,31 @@ private fun QuickActionBar(
 
     if (!showBar) return
 
-    BottomAppBar(
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = LcxSpacing.sm),
-            horizontalArrangement = Arrangement.spacedBy(LcxSpacing.sm),
-        ) {
-            if (canAdvance) {
-                val label = when (ticket.status) {
-                    TicketStatus.RECEIVED -> "Avanzar estado"
-                    TicketStatus.PROCESSING -> "Marcar Listo"
-                    TicketStatus.READY -> "Entregar"
-                    TicketStatus.DELIVERED -> ""
-                    TicketStatus.PAID -> ""
-                }
-                LcxButton(
-                    text = label,
-                    onClick = onAdvanceStatus,
-                    modifier = Modifier.weight(1f),
-                    enabled = !isLoading,
-                    isLoading = isLoading,
-                )
+    LcxStickyActionBar {
+        if (canAdvance) {
+            val label = when (ticket.status) {
+                TicketStatus.RECEIVED -> "Avanzar estado"
+                TicketStatus.PROCESSING -> "Marcar Listo"
+                TicketStatus.READY -> "Entregar"
+                TicketStatus.DELIVERED -> ""
+                TicketStatus.PAID -> ""
             }
-            if (canCharge) {
-                LcxButton(
-                    text = "Cobrar",
-                    onClick = onCharge,
-                    modifier = Modifier.weight(1f),
-                    enabled = !isLoading,
-                    variant = if (canAdvance) ButtonVariant.Secondary else ButtonVariant.Primary,
-                )
-            }
+            LcxButton(
+                text = label,
+                onClick = onAdvanceStatus,
+                modifier = Modifier.weight(1f),
+                enabled = !isLoading,
+                isLoading = isLoading,
+            )
+        }
+        if (canCharge) {
+            LcxButton(
+                text = "Cobrar",
+                onClick = onCharge,
+                modifier = Modifier.weight(1f),
+                enabled = !isLoading,
+                variant = if (canAdvance) ButtonVariant.Secondary else ButtonVariant.Primary,
+            )
         }
     }
 }

@@ -8,6 +8,7 @@ import com.cleanx.lcx.core.operational.OperatorOperationalRoutine
 import com.cleanx.lcx.core.operational.OperatorOperationalStatus
 import com.cleanx.lcx.core.operational.OperatorOperationalSummary
 import com.cleanx.lcx.core.operational.OperatorOperationalTask
+import com.cleanx.lcx.core.operational.OperatorOperationalAction
 import com.cleanx.lcx.feature.tickets.data.InventoryCatalogRecord
 import java.time.Duration
 import java.time.Instant
@@ -26,6 +27,14 @@ data class DashboardSnapshot(
 data class DashboardOperationalSummary(
     val headline: String,
     val recommendation: String,
+    val nextAction: OperatorOperationalAction?,
+)
+
+data class DashboardNextAction(
+    val title: String,
+    val description: String,
+    val ctaLabel: String,
+    val action: OperatorOperationalAction?,
 )
 
 data class DashboardRoutineSection(
@@ -106,7 +115,43 @@ fun OperatorOperationalSummary.toDashboardOperationalSummary(): DashboardOperati
     return DashboardOperationalSummary(
         headline = headline,
         recommendation = recommendation,
+        nextAction = nextAction,
     )
+}
+
+fun DashboardOperationalSummary.toNextAction(): DashboardNextAction {
+    return when (nextAction) {
+        OperatorOperationalAction.OPEN_ENTRY_CHECKLIST -> DashboardNextAction(
+            title = "Completar entrada",
+            description = headline,
+            ctaLabel = recommendation,
+            action = nextAction,
+        )
+        OperatorOperationalAction.OPEN_EXIT_CHECKLIST -> DashboardNextAction(
+            title = "Preparar cierre",
+            description = headline,
+            ctaLabel = recommendation,
+            action = nextAction,
+        )
+        OperatorOperationalAction.OPEN_WATER -> DashboardNextAction(
+            title = "Registrar agua",
+            description = headline,
+            ctaLabel = recommendation,
+            action = nextAction,
+        )
+        OperatorOperationalAction.OPEN_CASH -> DashboardNextAction(
+            title = "Actualizar caja",
+            description = headline,
+            ctaLabel = recommendation,
+            action = nextAction,
+        )
+        null -> DashboardNextAction(
+            title = "Turno al dia",
+            description = recommendation,
+            ctaLabel = "Actualizar",
+            action = null,
+        )
+    }
 }
 
 fun OperatorOperationalTask.toDashboardRoutineItem(): DashboardRoutineItem {

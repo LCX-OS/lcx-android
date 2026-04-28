@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material.icons.outlined.PersonOutline
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -46,6 +45,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavDestination
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -55,6 +55,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.cleanx.lcx.BuildConfig
 import com.cleanx.lcx.R
+import com.cleanx.lcx.core.model.UserRole
 import com.cleanx.lcx.core.navigation.BottomNavItem
 import com.cleanx.lcx.core.printing.toLabelData
 import com.cleanx.lcx.core.navigation.RouteAccess
@@ -141,7 +142,6 @@ fun MainScaffold(
     val drawerItems = remember(userRole) {
         listOf(
             DrawerItem("Agua", Screen.WaterGraph),
-            DrawerItem("Checklist", Screen.ChecklistGraph),
             DrawerItem("Más módulos", Screen.MoreGraph),
         ).filter { RouteAccess.canAccessTab(userRole, it.target) }
     }
@@ -153,8 +153,9 @@ fun MainScaffold(
             destination.hasRoute(Screen.ShiftsControl::class) ||
             destination.hasRoute(Screen.Cash::class) ||
             destination.hasRoute(Screen.Water::class) ||
-            destination.hasRoute(Screen.Checklist::class)
+        destination.hasRoute(Screen.Checklist::class)
     } == true
+    val shellTitle = shellTitleForDestination(currentDestination)
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -248,26 +249,13 @@ fun MainScaffold(
                                         .width(72.dp),
                                 )
                                 Text(
-                                    text = "Clean X",
+                                    text = shellTitle,
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.SemiBold,
                                 )
                             }
                         },
                         actions = {
-                            IconButton(
-                                onClick = {
-                                    tabNavController.navigate(Screen.MoreGraph) {
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                },
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.NotificationsNone,
-                                    contentDescription = "Notificaciones",
-                                )
-                            }
                             Surface(
                                 shape = MaterialTheme.shapes.small,
                                 color = MaterialTheme.colorScheme.secondaryContainer,
@@ -284,7 +272,7 @@ fun MainScaffold(
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = userBadgeText,
+                                        text = userBadgeInitials(userBadgeText, userRole),
                                         style = MaterialTheme.typography.labelLarge,
                                         color = MaterialTheme.colorScheme.onSecondaryContainer,
                                     )
@@ -366,8 +354,26 @@ fun MainScaffold(
                                     restoreState = true
                                 }
                             },
+                            onOpenSales = {
+                                tabNavController.navigate(Screen.SalesGraph) {
+                                    popUpTo(tabNavController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            },
                             onOpenCreateTicket = {
                                 tabNavController.navigate(Screen.CreateTicket)
+                            },
+                            onOpenTickets = {
+                                tabNavController.navigate(Screen.TicketsGraph) {
+                                    popUpTo(tabNavController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
                             },
                             onOpenTicket = { ticketId ->
                                 tabNavController.navigate(Screen.TicketDetail(ticketId = ticketId))
@@ -681,5 +687,40 @@ fun MainScaffold(
                 }
             }
         }
+    }
+}
+
+private fun shellTitleForDestination(destination: NavDestination?): String {
+    return when {
+        destination == null -> "Inicio"
+        destination.hasRoute(Screen.Dashboard::class) -> "Inicio"
+        destination.hasRoute(Screen.Sales::class) -> "Ventas"
+        destination.hasRoute(Screen.TicketList::class) -> "Encargos"
+        destination.hasRoute(Screen.ShiftsControl::class) -> "Turnos"
+        destination.hasRoute(Screen.Cash::class) -> "Caja"
+        destination.hasRoute(Screen.Water::class) -> "Agua"
+        destination.hasRoute(Screen.Checklist::class) -> "Checklist"
+        else -> "Clean X"
+    }
+}
+
+private fun userBadgeInitials(
+    badgeText: String,
+    role: UserRole,
+): String {
+    val source = badgeText.trim().takeIf { it.isNotEmpty() } ?: roleLabel(role)
+    val initials = source
+        .split(Regex("[^A-Za-z0-9]+"))
+        .filter { it.isNotBlank() }
+        .take(2)
+        .joinToString("") { it.first().uppercaseChar().toString() }
+    return initials.takeIf { it.isNotBlank() } ?: roleLabel(role).take(2).uppercase()
+}
+
+private fun roleLabel(role: UserRole): String {
+    return when (role) {
+        UserRole.SUPERADMIN -> "Superadmin"
+        UserRole.MANAGER -> "Gerente"
+        UserRole.EMPLOYEE -> "Operador"
     }
 }

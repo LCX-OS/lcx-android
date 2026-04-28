@@ -25,7 +25,20 @@ class MoreScreenSectionsTest {
         val hasDiagnostics = sections
             .flatMap { it.items }
             .any { it.screen == Screen.PaymentDiagnostics }
+        val hasBrotherDebug = sections
+            .flatMap { it.items }
+            .any { it.screen == Screen.SuppliesBrotherDebug }
 
         assertFalse(hasDiagnostics)
+        assertFalse(hasBrotherDebug)
+    }
+
+    @Test
+    fun `buildSections marks only wired modules available`() {
+        val items = buildSections(includePaymentDiagnostics = true).flatMap { it.items }
+
+        assertTrue(items.first { it.screen == Screen.SalesGraph }.isAvailable)
+        assertTrue(items.first { it.screen == Screen.PaymentDiagnostics }.isAvailable)
+        assertFalse(items.first { it.screen == Screen.ShiftsControl }.isAvailable)
     }
 }

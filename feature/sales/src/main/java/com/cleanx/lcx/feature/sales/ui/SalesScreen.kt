@@ -45,6 +45,9 @@ import com.cleanx.lcx.core.ui.ErrorState
 import com.cleanx.lcx.core.ui.LcxButton
 import com.cleanx.lcx.core.ui.LcxCard
 import com.cleanx.lcx.core.ui.LcxConfirmationDialog
+import com.cleanx.lcx.core.ui.LcxQuantityStepper
+import com.cleanx.lcx.core.ui.LcxStepHeader
+import com.cleanx.lcx.core.ui.LcxStickyActionBar
 import com.cleanx.lcx.core.ui.LcxTextField
 import com.cleanx.lcx.feature.tickets.data.AddOnCatalogRecord
 import com.cleanx.lcx.feature.tickets.data.CustomerDraft
@@ -107,9 +110,7 @@ fun SalesScreen(
             }
         },
         bottomBar = {
-            LcxCard(
-                modifier = Modifier.navigationBarsPadding(),
-            ) {
+            LcxStickyActionBar {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -134,6 +135,7 @@ fun SalesScreen(
                             "Cobrar"
                         },
                         onClick = viewModel::submit,
+                        modifier = Modifier.weight(1f),
                         isLoading = state.isSubmitting,
                         enabled = !state.isLoadingCatalogs &&
                             !state.customer.isSaving &&
@@ -248,6 +250,14 @@ fun SalesScreen(
                     }
 
                     item {
+                        LcxStepHeader(
+                            step = 1,
+                            title = "Cliente",
+                            summary = "Datos de venta",
+                        )
+                    }
+
+                    item {
                         CustomerSection(
                             state = state,
                             onSearchQueryChanged = viewModel::onCustomerSearchQueryChanged,
@@ -265,10 +275,10 @@ fun SalesScreen(
                     }
 
                     item {
-                        PaymentSection(
-                            paymentMethod = state.paymentMethod,
-                            enabled = !state.isSubmitting && state.criticalFailure == null,
-                            onMethodChanged = viewModel::onPaymentMethodChanged,
+                        LcxStepHeader(
+                            step = 2,
+                            title = "Carrito",
+                            summary = "Equipos, productos e inventario",
                         )
                     }
 
@@ -318,6 +328,22 @@ fun SalesScreen(
                             enabled = !state.isSubmitting,
                             onQueryChanged = viewModel::onInventorySearchQueryChanged,
                             onAdjustQuantity = viewModel::adjustQuantity,
+                        )
+                    }
+
+                    item {
+                        LcxStepHeader(
+                            step = 3,
+                            title = "Pago y resumen",
+                            summary = "Metodo y total",
+                        )
+                    }
+
+                    item {
+                        PaymentSection(
+                            paymentMethod = state.paymentMethod,
+                            enabled = !state.isSubmitting && state.criticalFailure == null,
+                            onMethodChanged = viewModel::onPaymentMethodChanged,
                         )
                     }
 
@@ -805,28 +831,12 @@ private fun QuantityRow(
                 )
             }
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(LcxSpacing.xs),
-            ) {
-                TextButton(
-                    onClick = onDecrease,
-                    enabled = enabled && quantity > 0,
-                ) {
-                    Text("-")
-                }
-                Text(
-                    text = quantity.toString(),
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(horizontal = LcxSpacing.xs),
-                )
-                TextButton(
-                    onClick = onIncrease,
-                    enabled = enabled,
-                ) {
-                    Text("+")
-                }
-            }
+            LcxQuantityStepper(
+                quantity = quantity,
+                enabled = enabled,
+                onDecrease = onDecrease,
+                onIncrease = onIncrease,
+            )
         }
     }
 }

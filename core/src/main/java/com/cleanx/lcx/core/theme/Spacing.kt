@@ -14,8 +14,8 @@ object LcxSpacing {
     val xl: Dp = 32.dp
     val xxl: Dp = 48.dp
 
-    val screenHorizontal: Dp = 20.dp
-    val cardPadding: Dp = 20.dp
+    val screenHorizontal: Dp = 16.dp
+    val cardPadding: Dp = 16.dp
     val controlMinHeight: Dp = 52.dp
     val iconContainer: Dp = 44.dp
 }

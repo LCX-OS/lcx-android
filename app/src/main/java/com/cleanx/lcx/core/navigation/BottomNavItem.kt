@@ -1,8 +1,8 @@
 package com.cleanx.lcx.core.navigation
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.ConfirmationNumber
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.PointOfSale
@@ -37,10 +37,10 @@ enum class BottomNavItem(
         icon = Icons.Filled.ConfirmationNumber,
         graphRoute = Screen.TicketsGraph,
     ),
-    TURNOS(
-        label = "Turnos",
-        icon = Icons.Filled.AccessTime,
-        graphRoute = Screen.ShiftsGraph,
+    CHECKLIST(
+        label = "Checklist",
+        icon = Icons.Filled.Checklist,
+        graphRoute = Screen.ChecklistGraph,
     ),
     CAJA(
         label = "Caja",

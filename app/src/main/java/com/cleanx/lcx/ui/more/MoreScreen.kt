@@ -47,6 +47,7 @@ internal data class MoreItem(
     val label: String,
     val icon: ImageVector,
     val screen: Screen,
+    val isAvailable: Boolean = false,
 )
 
 /**
@@ -67,7 +68,7 @@ internal fun buildSections(
         MoreSection(
             title = "Ventas",
             items = listOf(
-                MoreItem("Ventas", Icons.Filled.PointOfSale, Screen.SalesGraph),
+                MoreItem("Ventas", Icons.Filled.PointOfSale, Screen.SalesGraph, isAvailable = true),
             ),
         ),
     )
@@ -103,12 +104,14 @@ internal fun buildSections(
     add(
         MoreSection(
             title = "Insumos",
-            items = listOf(
-                MoreItem("Inventario", Icons.Filled.Inventory, Screen.SuppliesInventory),
-                MoreItem("Etiquetas", Icons.AutoMirrored.Filled.Label, Screen.SuppliesLabels),
-                MoreItem("Reportes", Icons.Filled.Summarize, Screen.SuppliesReports),
-                MoreItem("Debug Brother", Icons.Filled.BugReport, Screen.SuppliesBrotherDebug),
-            ),
+            items = buildList {
+                add(MoreItem("Inventario", Icons.Filled.Inventory, Screen.SuppliesInventory))
+                add(MoreItem("Etiquetas", Icons.AutoMirrored.Filled.Label, Screen.SuppliesLabels))
+                add(MoreItem("Reportes", Icons.Filled.Summarize, Screen.SuppliesReports))
+                if (includePaymentDiagnostics) {
+                    add(MoreItem("Debug Brother", Icons.Filled.BugReport, Screen.SuppliesBrotherDebug))
+                }
+            },
         ),
     )
     add(
@@ -142,7 +145,12 @@ internal fun buildSections(
             MoreSection(
                 title = "Debug",
                 items = listOf(
-                    MoreItem("Diagnosticos de pagos", Icons.Filled.BugReport, Screen.PaymentDiagnostics),
+                    MoreItem(
+                        "Diagnosticos de pagos",
+                        Icons.Filled.BugReport,
+                        Screen.PaymentDiagnostics,
+                        isAvailable = true,
+                    ),
                 ),
             ),
         )
@@ -171,6 +179,14 @@ fun MoreScreen(
             }
             .filter { it.items.isNotEmpty() }
     }
+    val availableSections = sections.mapNotNull { section ->
+        section.copy(items = section.items.filter { it.isAvailable })
+            .takeIf { it.items.isNotEmpty() }
+    }
+    val upcomingSections = sections.mapNotNull { section ->
+        section.copy(items = section.items.filterNot { it.isAvailable })
+            .takeIf { it.items.isNotEmpty() }
+    }
 
     Scaffold(
         modifier = modifier,
@@ -183,41 +199,79 @@ fun MoreScreen(
         LazyColumn(
             modifier = Modifier.padding(innerPadding),
         ) {
-            sections.forEach { section ->
-                item(key = "header-${section.title}") {
-                    Text(
-                        text = section.title,
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(
-                            start = 16.dp,
-                            end = 16.dp,
-                            top = 16.dp,
-                            bottom = 4.dp,
-                        ),
-                    )
-                }
+            renderSectionGroup(
+                title = "Disponible",
+                sections = availableSections,
+                onNavigate = onNavigate,
+            )
+            renderSectionGroup(
+                title = "Proximamente",
+                sections = upcomingSections,
+                onNavigate = onNavigate,
+            )
+        }
+    }
+}
 
-                items(
-                    items = section.items,
-                    key = { "${section.title}-${it.label}" },
-                ) { item ->
-                    ListItem(
-                        headlineContent = { Text(item.label) },
-                        leadingContent = {
-                            Icon(
-                                imageVector = item.icon,
-                                contentDescription = item.label,
-                            )
-                        },
-                        modifier = Modifier.clickable { onNavigate(item.screen) },
-                    )
-                }
+private fun androidx.compose.foundation.lazy.LazyListScope.renderSectionGroup(
+    title: String,
+    sections: List<MoreSection>,
+    onNavigate: (Screen) -> Unit,
+) {
+    if (sections.isEmpty()) return
 
-                item(key = "divider-${section.title}") {
-                    HorizontalDivider()
-                }
-            }
+    item(key = "group-$title") {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(
+                start = 16.dp,
+                end = 16.dp,
+                top = 16.dp,
+                bottom = 4.dp,
+            ),
+        )
+    }
+
+    sections.forEach { section ->
+        item(key = "header-$title-${section.title}") {
+            Text(
+                text = section.title,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = 8.dp,
+                    bottom = 2.dp,
+                ),
+            )
+        }
+
+        items(
+            items = section.items,
+            key = { "$title-${section.title}-${it.label}" },
+        ) { item ->
+            ListItem(
+                headlineContent = { Text(item.label) },
+                supportingContent = if (item.isAvailable) {
+                    null
+                } else {
+                    { Text("Modulo en preparacion") }
+                },
+                leadingContent = {
+                    Icon(
+                        imageVector = item.icon,
+                        contentDescription = item.label,
+                    )
+                },
+                modifier = Modifier.clickable { onNavigate(item.screen) },
+            )
+        }
+
+        item(key = "divider-$title-${section.title}") {
+            HorizontalDivider()
         }
     }
 }
