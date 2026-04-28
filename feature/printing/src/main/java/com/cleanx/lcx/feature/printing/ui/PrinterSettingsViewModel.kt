@@ -165,6 +165,9 @@ class PrinterSettingsViewModel @Inject constructor(
                 serviceType = "test-print",
                 date = "2026-03-02",
                 dailyFolio = 0,
+                ticketId = "test-print",
+                promisedPickupDate = "2026-03-02",
+                paymentLabel = "PAGO: PENDIENTE",
             )
             when (val result = printRepository.printWithRetry(testLabel)) {
                 is PrintResult.Success -> {

@@ -55,9 +55,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.cleanx.lcx.BuildConfig
 import com.cleanx.lcx.R
-import com.cleanx.lcx.core.model.ServiceType
-import com.cleanx.lcx.core.model.Ticket
 import com.cleanx.lcx.core.navigation.BottomNavItem
+import com.cleanx.lcx.core.printing.toLabelData
 import com.cleanx.lcx.core.navigation.RouteAccess
 import com.cleanx.lcx.core.navigation.Screen
 import com.cleanx.lcx.core.theme.LcxSpacing
@@ -68,7 +67,6 @@ import com.cleanx.lcx.feature.checklist.ui.ChecklistScreen as FeatureChecklistSc
 import com.cleanx.lcx.feature.checklist.ui.ChecklistViewModel
 import com.cleanx.lcx.feature.payments.ui.ChargeScreen
 import com.cleanx.lcx.feature.payments.ui.PaymentDiagnosticsScreen
-import com.cleanx.lcx.feature.printing.data.LabelData
 import com.cleanx.lcx.feature.printing.ui.PrintScreen
 import com.cleanx.lcx.feature.printing.ui.PrintViewModel
 import com.cleanx.lcx.feature.sales.ui.SalesScreen
@@ -684,18 +682,4 @@ fun MainScaffold(
             }
         }
     }
-}
-
-private fun Ticket.toLabelData(): LabelData {
-    val serviceTypeLabel = when (serviceType) {
-        ServiceType.IN_STORE -> "En tienda"
-        ServiceType.WASH_FOLD -> "Lavado y doblado"
-    }
-    return LabelData(
-        ticketNumber = ticketNumber,
-        customerName = customerName,
-        serviceType = service?.takeIf { it.isNotBlank() } ?: serviceTypeLabel,
-        date = ticketDate,
-        dailyFolio = dailyFolio,
-    )
 }

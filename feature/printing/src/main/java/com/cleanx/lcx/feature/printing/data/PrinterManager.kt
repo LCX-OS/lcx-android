@@ -46,7 +46,31 @@ data class LabelData(
     val serviceType: String,
     val date: String,
     val dailyFolio: Int,
-)
+    val ticketId: String? = null,
+    val promisedPickupDate: String? = null,
+    val paymentLabel: String = DEFAULT_PAYMENT_LABEL,
+    val bagNumber: Int = DEFAULT_BAG_NUMBER,
+    val totalBags: Int = DEFAULT_TOTAL_BAGS,
+    val copyNumber: Int = DEFAULT_COPY_NUMBER,
+) {
+    fun forBag(bagNumber: Int, totalBags: Int): LabelData {
+        val safeTotal = totalBags.coerceIn(MIN_BAG_COUNT, MAX_BAG_COUNT)
+        return copy(
+            bagNumber = bagNumber.coerceIn(MIN_BAG_COUNT, safeTotal),
+            totalBags = safeTotal,
+            copyNumber = DEFAULT_COPY_NUMBER,
+        )
+    }
+
+    companion object {
+        const val DEFAULT_PAYMENT_LABEL = "PAGO: PENDIENTE"
+        const val DEFAULT_BAG_NUMBER = 1
+        const val DEFAULT_TOTAL_BAGS = 1
+        const val DEFAULT_COPY_NUMBER = 1
+        const val MIN_BAG_COUNT = 1
+        const val MAX_BAG_COUNT = 25
+    }
+}
 
 /**
  * Result of a print attempt.

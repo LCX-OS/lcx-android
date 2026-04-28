@@ -3,11 +3,11 @@ package com.cleanx.lcx.core.transaction
 import com.cleanx.lcx.core.model.Ticket
 import com.cleanx.lcx.core.network.CorrelationContext
 import com.cleanx.lcx.core.network.TicketDraft
+import com.cleanx.lcx.core.printing.toLabelData
 import com.cleanx.lcx.core.transaction.data.SavedTransaction
 import com.cleanx.lcx.core.transaction.data.TransactionPersistence
 import com.cleanx.lcx.feature.payments.data.ChargeResult
 import com.cleanx.lcx.feature.payments.data.PaymentRepository
-import com.cleanx.lcx.feature.printing.data.LabelData
 import com.cleanx.lcx.feature.printing.data.PrintRepository
 import com.cleanx.lcx.feature.printing.data.PrintResult
 import com.cleanx.lcx.feature.tickets.data.ApiResult
@@ -351,13 +351,7 @@ class TransactionOrchestrator @Inject constructor(
             printRepository.getSelectedPrinter()?.name ?: "none",
         )
 
-        val label = LabelData(
-            ticketNumber = ticket.ticketNumber,
-            customerName = ticket.customerName,
-            serviceType = ticket.serviceType.name,
-            date = ticket.ticketDate,
-            dailyFolio = ticket.dailyFolio,
-        )
+        val label = ticket.toLabelData()
 
         when (val result = printRepository.printWithRetry(label)) {
             is PrintResult.Success -> {

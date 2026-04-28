@@ -79,9 +79,11 @@ class StubPrinterManager @Inject constructor() : PrinterManager {
 
     override suspend fun print(label: LabelData): PrintResult {
         Timber.tag(TAG).d(
-            "printing label ticket=%s folio=#%d customer=%s",
+            "printing label ticket=%s bag=%d/%d copy=%d customer=%s",
             label.ticketNumber,
-            label.dailyFolio,
+            label.bagNumber,
+            label.totalBags,
+            label.copyNumber,
             label.customerName,
         )
         delay(PRINT_DELAY_MS)

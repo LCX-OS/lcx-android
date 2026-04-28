@@ -1,11 +1,13 @@
 package com.cleanx.lcx.feature.printing
 
 import android.graphics.Bitmap
+import android.graphics.Color
 import com.cleanx.lcx.feature.printing.data.LabelData
 import com.cleanx.lcx.feature.printing.data.LabelRenderer
 import com.cleanx.lcx.feature.printing.data.LabelVariant
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -21,6 +23,12 @@ class LabelRendererTest {
         serviceType = "wash-fold",
         date = "2026-03-02",
         dailyFolio = 1,
+        ticketId = "12345678-90ab-cdef",
+        promisedPickupDate = "2026-03-05",
+        paymentLabel = "PAGO: PENDIENTE",
+        bagNumber = 1,
+        totalBags = 2,
+        copyNumber = 1,
     )
 
     // -- Standard variant -----------------------------------------------------
@@ -39,6 +47,13 @@ class LabelRendererTest {
         val bitmap = LabelRenderer.render(sampleLabel)
 
         assertEquals(Bitmap.Config.ARGB_8888, bitmap.config)
+    }
+
+    @Test
+    fun `standard variant draws visible label content`() {
+        val bitmap = LabelRenderer.render(sampleLabel)
+
+        assertTrue(bitmap.hasNonWhitePixels())
     }
 
     @Test
@@ -85,6 +100,13 @@ class LabelRendererTest {
         val bitmap = LabelRenderer.render(sampleLabel, LabelVariant.COMPACT)
 
         assertEquals(Bitmap.Config.ARGB_8888, bitmap.config)
+    }
+
+    @Test
+    fun `compact variant draws visible label content`() {
+        val bitmap = LabelRenderer.render(sampleLabel, LabelVariant.COMPACT)
+
+        assertTrue(bitmap.hasNonWhitePixels())
     }
 
     @Test
@@ -144,5 +166,14 @@ class LabelRendererTest {
         assertNotNull(preview)
         assertEquals(LabelRenderer.COMPACT_LABEL_WIDTH / 2, preview.width)
         assertEquals(LabelRenderer.COMPACT_LABEL_HEIGHT / 2, preview.height)
+    }
+
+    private fun Bitmap.hasNonWhitePixels(): Boolean {
+        for (x in 0 until width) {
+            for (y in 0 until height) {
+                if (getPixel(x, y) != Color.WHITE) return true
+            }
+        }
+        return false
     }
 }

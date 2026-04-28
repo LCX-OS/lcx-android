@@ -23,6 +23,7 @@ data class PrintUiState(
     val printers: List<PrinterInfo> = emptyList(),
     val selectedPrinter: PrinterInfo? = null,
     val errorMessage: String? = null,
+    val labelCount: Int = 1,
     /** Set to true once the user decides to skip or printing succeeds. */
     val finished: Boolean = false,
 )
@@ -53,10 +54,32 @@ class PrintViewModel @Inject constructor(
 
     // Label data is set externally before printing (from the ticket detail).
     private var labelData: LabelData? = null
+    private var labelsToPrint: List<LabelData> = emptyList()
 
     /** Provide the label content that should be printed. */
     fun setLabelData(data: LabelData) {
         labelData = data
+        labelsToPrint = emptyList()
+        _uiState.update { it.copy(labelCount = LabelData.DEFAULT_TOTAL_BAGS, errorMessage = null) }
+    }
+
+    fun prepareLabels(totalBags: Int) {
+        val base = labelData
+        if (base == null) {
+            _uiState.update {
+                it.copy(
+                    phase = PrintPhase.ERROR,
+                    errorMessage = "No hay datos de etiqueta.",
+                )
+            }
+            return
+        }
+
+        val safeTotal = totalBags.coerceIn(LabelData.MIN_BAG_COUNT, LabelData.MAX_BAG_COUNT)
+        labelsToPrint = (1..safeTotal).map { bagNumber ->
+            base.forBag(bagNumber = bagNumber, totalBags = safeTotal)
+        }
+        _uiState.update { it.copy(labelCount = labelsToPrint.size, errorMessage = null) }
     }
 
     // -- Actions --------------------------------------------------------------
@@ -181,8 +204,11 @@ class PrintViewModel @Inject constructor(
     }
 
     private suspend fun printLabel() {
-        val label = labelData
-        if (label == null) {
+        val labels = labelsToPrint.ifEmpty {
+            labelData?.let { listOf(it.forBag(LabelData.DEFAULT_BAG_NUMBER, LabelData.DEFAULT_TOTAL_BAGS)) }
+                ?: emptyList()
+        }
+        if (labels.isEmpty()) {
             _uiState.update {
                 it.copy(
                     phase = PrintPhase.ERROR,
@@ -193,19 +219,21 @@ class PrintViewModel @Inject constructor(
         }
 
         _uiState.update { it.copy(phase = PrintPhase.PRINTING) }
-        when (val result = printRepository.printWithRetry(label)) {
-            is PrintResult.Success -> {
-                _uiState.update { it.copy(phase = PrintPhase.SUCCESS) }
-            }
-            is PrintResult.Error -> {
-                _uiState.update {
-                    it.copy(
-                        phase = PrintPhase.ERROR,
-                        errorMessage = result.message,
-                    )
+        labels.forEach { label ->
+            when (val result = printRepository.printWithRetry(label)) {
+                is PrintResult.Success -> Unit
+                is PrintResult.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            phase = PrintPhase.ERROR,
+                            errorMessage = "Bolsa ${label.bagNumber}/${label.totalBags}: ${result.message}",
+                        )
+                    }
+                    return
                 }
             }
         }
+        _uiState.update { it.copy(phase = PrintPhase.SUCCESS, labelCount = labels.size) }
     }
 
     override fun onCleared() {

@@ -172,7 +172,10 @@ class PrintRepository @Inject constructor(
 
         repeat(copies) { copy ->
             Timber.tag("PRINT").d("Printing copy %d/%d", copy + 1, copies)
-            val result = printSingleCopy(label, maxAttempts)
+            val result = printSingleCopy(
+                label.copy(copyNumber = label.copyNumber + copy),
+                maxAttempts,
+            )
             if (result is PrintResult.Error) {
                 return result
             }

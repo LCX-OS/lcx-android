@@ -193,9 +193,11 @@ class BrotherPrinterManager @Inject constructor(
 
         if (outcome.isSuccess) {
             Timber.tag("PRINT").i(
-                "Brother print success: ticket=%s folio=%d printer=%s",
+                "Brother print success: ticket=%s bag=%d/%d copy=%d printer=%s",
                 label.ticketNumber,
-                label.dailyFolio,
+                label.bagNumber,
+                label.totalBags,
+                label.copyNumber,
                 printer?.name ?: "unknown",
             )
             return@withContext PrintResult.Success

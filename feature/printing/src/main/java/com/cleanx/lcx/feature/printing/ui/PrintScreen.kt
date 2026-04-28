@@ -12,12 +12,14 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
@@ -28,6 +30,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,6 +42,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -64,6 +68,7 @@ fun PrintScreen(
 
     var pendingAutoDiscover by remember { mutableStateOf(false) }
     var pendingPrinterSelection by remember { mutableStateOf<PrinterInfo?>(null) }
+    var totalBags by rememberSaveable(initialLabelData?.ticketNumber) { mutableStateOf(LabelData.DEFAULT_TOTAL_BAGS) }
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
     ) { granted ->
@@ -85,21 +90,19 @@ fun PrintScreen(
         initialLabelData?.let(viewModel::setLabelData)
     }
 
+    val startPrint = {
+        viewModel.prepareLabels(totalBags)
+        if (needsBluetoothPermission() && !hasBluetoothConnectPermission(context)) {
+            pendingAutoDiscover = true
+            permissionLauncher.launch(Manifest.permission.BLUETOOTH_CONNECT)
+        } else {
+            viewModel.autoConnectOrDiscover()
+        }
+    }
+
     // Navigate away once the flow is complete (skip or success acknowledged).
     LaunchedEffect(state.finished) {
         if (state.finished) onFinished()
-    }
-
-    // Auto-start: try auto-connect to saved printer first, fall back to discovery.
-    LaunchedEffect(Unit) {
-        if (state.phase == PrintPhase.IDLE && !state.finished) {
-            if (needsBluetoothPermission() && !hasBluetoothConnectPermission(context)) {
-                pendingAutoDiscover = true
-                permissionLauncher.launch(Manifest.permission.BLUETOOTH_CONNECT)
-            } else {
-                viewModel.autoConnectOrDiscover()
-            }
-        }
     }
 
     // Haptic feedback on successful print
@@ -116,7 +119,7 @@ fun PrintScreen(
                 .padding(LcxSpacing.md),
         ) {
             Text(
-                text = "Imprimir etiqueta",
+                text = "Imprimir etiquetas",
                 style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.semantics { heading() },
             )
@@ -124,7 +127,15 @@ fun PrintScreen(
             Spacer(modifier = Modifier.height(LcxSpacing.md))
 
             when (state.phase) {
-                PrintPhase.IDLE -> { /* waiting */ }
+                PrintPhase.IDLE -> LabelSetupContent(
+                    labelData = initialLabelData,
+                    totalBags = totalBags,
+                    onTotalBagsChange = {
+                        totalBags = it.coerceIn(LabelData.MIN_BAG_COUNT, LabelData.MAX_BAG_COUNT)
+                    },
+                    onPrint = startPrint,
+                    onSkip = viewModel::skip,
+                )
                 PrintPhase.DISCOVERING -> { /* Loading overlay shows on top */ }
 
                 PrintPhase.SELECTING -> SelectingContent(
@@ -147,7 +158,10 @@ fun PrintScreen(
                 PrintPhase.CONNECTING -> { /* Loading overlay shows on top */ }
                 PrintPhase.PRINTING -> { /* Loading overlay shows on top */ }
 
-                PrintPhase.SUCCESS -> SuccessContent(onDone = viewModel::skip)
+                PrintPhase.SUCCESS -> SuccessContent(
+                    labelCount = state.labelCount,
+                    onDone = viewModel::skip,
+                )
 
                 PrintPhase.ERROR -> ErrorContent(
                     message = mapPrintErrorToUserMessage(state.errorMessage ?: "Error desconocido"),
@@ -161,13 +175,113 @@ fun PrintScreen(
         when (state.phase) {
             PrintPhase.DISCOVERING -> LoadingOverlay(message = "Buscando impresoras...")
             PrintPhase.CONNECTING -> LoadingOverlay(message = "Conectando a impresora...")
-            PrintPhase.PRINTING -> LoadingOverlay(message = "Imprimiendo etiqueta...")
+            PrintPhase.PRINTING -> LoadingOverlay(
+                message = if (state.labelCount > 1) {
+                    "Imprimiendo ${state.labelCount} etiquetas..."
+                } else {
+                    "Imprimiendo etiqueta..."
+                },
+            )
             else -> {}
         }
     }
 }
 
 // -- Sub-screens --------------------------------------------------------------
+
+@Composable
+private fun LabelSetupContent(
+    labelData: LabelData?,
+    totalBags: Int,
+    onTotalBagsChange: (Int) -> Unit,
+    onPrint: () -> Unit,
+    onSkip: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(LcxSpacing.md),
+    ) {
+        if (labelData == null) {
+            Text(
+                text = "No hay datos de etiqueta.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+            )
+            LcxButton(
+                text = "Volver",
+                onClick = onSkip,
+                modifier = Modifier.fillMaxWidth(),
+                variant = ButtonVariant.Secondary,
+            )
+            return
+        }
+
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(LcxSpacing.md),
+                verticalArrangement = Arrangement.spacedBy(LcxSpacing.sm),
+            ) {
+                Text(
+                    text = labelData.ticketNumber,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = labelData.customerName.ifBlank { "Cliente" },
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+                Text(
+                    text = labelData.paymentLabel.ifBlank { LabelData.DEFAULT_PAYMENT_LABEL },
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+
+        Text(
+            text = "Total de bolsas",
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            LcxButton(
+                text = "-",
+                onClick = { onTotalBagsChange(totalBags - 1) },
+                modifier = Modifier.width(64.dp),
+                enabled = totalBags > LabelData.MIN_BAG_COUNT,
+                variant = ButtonVariant.Secondary,
+            )
+            Text(
+                text = totalBags.toString(),
+                modifier = Modifier.width(96.dp),
+                style = MaterialTheme.typography.headlineMedium,
+                textAlign = TextAlign.Center,
+            )
+            LcxButton(
+                text = "+",
+                onClick = { onTotalBagsChange(totalBags + 1) },
+                modifier = Modifier.width(64.dp),
+                enabled = totalBags < LabelData.MAX_BAG_COUNT,
+                variant = ButtonVariant.Secondary,
+            )
+        }
+
+        LcxButton(
+            text = if (totalBags == 1) "Imprimir 1 etiqueta" else "Imprimir $totalBags etiquetas",
+            onClick = onPrint,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        LcxButton(
+            text = "Omitir impresion",
+            onClick = onSkip,
+            modifier = Modifier.fillMaxWidth(),
+            variant = ButtonVariant.Secondary,
+        )
+    }
+}
 
 @Composable
 private fun SelectingContent(
@@ -226,7 +340,10 @@ private fun PrinterCard(printer: PrinterInfo, onClick: () -> Unit) {
 }
 
 @Composable
-private fun SuccessContent(onDone: () -> Unit) {
+private fun SuccessContent(
+    labelCount: Int,
+    onDone: () -> Unit,
+) {
     CenteredColumn {
         // Animated checkmark with scale-in effect
         var visible by remember { mutableStateOf(false) }
@@ -244,7 +361,7 @@ private fun SuccessContent(onDone: () -> Unit) {
         }
         Spacer(modifier = Modifier.height(LcxSpacing.sm))
         Text(
-            text = "Etiqueta impresa",
+            text = if (labelCount == 1) "Etiqueta impresa" else "$labelCount etiquetas impresas",
             style = MaterialTheme.typography.headlineSmall,
             color = LcxSuccess,
             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },

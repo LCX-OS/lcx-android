@@ -227,12 +227,13 @@ class PrintRepositoryTest {
         every { printerManager.isConnected() } returns true
         // Re-create repo with updated preferences mock
         repository = PrintRepository(printerManager, printerPreferences)
-        coEvery { printerManager.print(sampleLabel) } returns PrintResult.Success
+        coEvery { printerManager.print(any()) } returns PrintResult.Success
 
         val result = repository.printWithRetry(sampleLabel)
 
         assertTrue(result is PrintResult.Success)
-        coVerify(exactly = 2) { printerManager.print(sampleLabel) }
+        coVerify { printerManager.print(sampleLabel.copy(copyNumber = 1)) }
+        coVerify { printerManager.print(sampleLabel.copy(copyNumber = 2)) }
     }
 
     @Test
@@ -240,7 +241,7 @@ class PrintRepositoryTest {
         every { printerPreferences.printCopies } returns flowOf(3)
         every { printerManager.isConnected() } returns true
         repository = PrintRepository(printerManager, printerPreferences)
-        coEvery { printerManager.print(sampleLabel) } returnsMany listOf(
+        coEvery { printerManager.print(any()) } returnsMany listOf(
             PrintResult.Success,
             PrintResult.Error("ERR", "fail"),
             PrintResult.Error("ERR", "fail"),

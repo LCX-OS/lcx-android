@@ -4,7 +4,11 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.RectF
 import android.graphics.Typeface
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 /**
  * Renders a [LabelData] into a [Bitmap] suitable for Brother label printers.
@@ -34,8 +38,10 @@ object LabelRenderer {
     /** Compact label height in pixels (90 mm at 300 DPI). */
     const val COMPACT_LABEL_HEIGHT = 1062
 
-    private const val PADDING_LEFT = 24f
-    private const val PADDING_TOP = 16f
+    private const val STANDARD_MARGIN = 10f
+    private const val STANDARD_PADDING_X = 18f
+    private const val STANDARD_PADDING_Y = 14f
+    private const val STANDARD_BORDER_WIDTH = 3f
 
     /**
      * Renders [label] using the specified [variant].
@@ -69,62 +75,101 @@ object LabelRenderer {
         val canvas = Canvas(bitmap)
         canvas.drawColor(Color.WHITE)
 
-        val ticketNumberPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.BLACK
-            textSize = 56f
+            style = Paint.Style.STROKE
+            strokeWidth = STANDARD_BORDER_WIDTH
+        }
+
+        val ticketPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.BLACK
+            textSize = 44f
             typeface = Typeface.DEFAULT_BOLD
         }
 
-        val folioPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        val bagPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.BLACK
-            textSize = 40f
+            textSize = 29f
             typeface = Typeface.DEFAULT_BOLD
         }
 
-        val bodyPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        val customerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.BLACK
-            textSize = 32f
+            textSize = 38f
+            typeface = Typeface.DEFAULT_BOLD
+        }
+
+        val paymentPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.BLACK
+            textSize = 25f
+            typeface = Typeface.DEFAULT_BOLD
+        }
+
+        val metaPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.BLACK
+            textSize = 24f
             typeface = Typeface.DEFAULT
         }
 
-        val smallPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.DKGRAY
-            textSize = 26f
-            typeface = Typeface.DEFAULT
+        val footerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.BLACK
+            textSize = 22f
+            typeface = Typeface.DEFAULT_BOLD
         }
 
-        var y = PADDING_TOP
+        val outer = RectF(
+            STANDARD_MARGIN,
+            STANDARD_MARGIN,
+            LABEL_WIDTH - STANDARD_MARGIN,
+            LABEL_HEIGHT - STANDARD_MARGIN,
+        )
+        canvas.drawRect(outer, borderPaint)
 
-        // Row 1: Ticket number (large, bold) + Folio top-right
-        y += ticketNumberPaint.textHeight()
-        canvas.drawText(label.ticketNumber, PADDING_LEFT, y, ticketNumberPaint)
+        val left = STANDARD_MARGIN + STANDARD_PADDING_X
+        val right = LABEL_WIDTH - STANDARD_MARGIN - STANDARD_PADDING_X
+        val top = STANDARD_MARGIN + STANDARD_PADDING_Y
+        val bottom = LABEL_HEIGHT - STANDARD_MARGIN - STANDARD_PADDING_Y
 
-        val folioText = "#${label.dailyFolio}"
-        val folioWidth = folioPaint.measureText(folioText)
-        canvas.drawText(folioText, LABEL_WIDTH - folioWidth - PADDING_LEFT, y, folioPaint)
-
-        y += 16f
-
-        // Row 2: Customer name
-        y += bodyPaint.textHeight()
+        val bagText = label.bagLabel()
+        val bagWidth = bagPaint.measureText(bagText)
+        val ticketMaxWidth = (right - left - bagWidth - 16f).coerceAtLeast(80f)
+        val headerBaseline = top + ticketPaint.textHeight()
         canvas.drawText(
-            label.customerName.ellipsize(bodyPaint, LABEL_WIDTH - 2 * PADDING_LEFT),
-            PADDING_LEFT,
-            y,
-            bodyPaint,
+            label.ticketNumber.ellipsize(ticketPaint, ticketMaxWidth),
+            left,
+            headerBaseline,
+            ticketPaint,
+        )
+        canvas.drawText(bagText, right - bagWidth, headerBaseline, bagPaint)
+
+        val customerBaseline = headerBaseline + 58f
+        canvas.drawText(
+            label.customerName.ifBlank { "Cliente" }.ellipsize(customerPaint, right - left),
+            left,
+            customerBaseline,
+            customerPaint,
         )
 
-        y += 12f
+        val paymentBaseline = customerBaseline + 38f
+        canvas.drawText(
+            label.safePaymentLabel().ellipsize(paymentPaint, right - left),
+            left,
+            paymentBaseline,
+            paymentPaint,
+        )
 
-        // Row 3: Service type
-        y += bodyPaint.textHeight()
-        canvas.drawText(label.serviceType, PADDING_LEFT, y, bodyPaint)
+        val deliveryBaseline = paymentBaseline + 34f
+        canvas.drawText(
+            label.deliveryLabel().ellipsize(metaPaint, right - left),
+            left,
+            deliveryBaseline,
+            metaPaint,
+        )
 
-        y += 12f
-
-        // Row 4: Date (smaller, gray)
-        y += smallPaint.textHeight()
-        canvas.drawText(label.date, PADDING_LEFT, y, smallPaint)
+        val footerBaseline = bottom
+        canvas.drawText(label.shortIdLabel(), left, footerBaseline, footerPaint)
+        val copyText = label.copyLabel()
+        canvas.drawText(copyText, right - footerPaint.measureText(copyText), footerBaseline, footerPaint)
 
         return bitmap
     }
@@ -140,76 +185,88 @@ object LabelRenderer {
         val canvas = Canvas(bitmap)
         canvas.drawColor(Color.WHITE)
 
+        val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.BLACK
+            style = Paint.Style.STROKE
+            strokeWidth = 3f
+        }
+
         val ticketPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.BLACK
-            textSize = 36f
+            textSize = 34f
             typeface = Typeface.DEFAULT_BOLD
         }
 
-        val folioPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        val bagPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.BLACK
-            textSize = 28f
+            textSize = 30f
             typeface = Typeface.DEFAULT_BOLD
         }
 
-        val bodyPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        val customerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.BLACK
+            textSize = 30f
+            typeface = Typeface.DEFAULT_BOLD
+        }
+
+        val paymentPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.BLACK
             textSize = 24f
+            typeface = Typeface.DEFAULT_BOLD
+        }
+
+        val metaPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.BLACK
+            textSize = 22f
             typeface = Typeface.DEFAULT
         }
 
-        val smallPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.DKGRAY
+        val footerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.BLACK
             textSize = 20f
             typeface = Typeface.DEFAULT
         }
 
+        val margin = 10f
         val padding = 16f
-        var y = padding
+        val outer = RectF(margin, margin, COMPACT_LABEL_WIDTH - margin, COMPACT_LABEL_HEIGHT - margin)
+        canvas.drawRect(outer, borderPaint)
 
-        // Row 1: Ticket number
-        y += ticketPaint.textHeight()
+        val left = margin + padding
+        val right = COMPACT_LABEL_WIDTH - margin - padding
+        val bottom = COMPACT_LABEL_HEIGHT - margin - padding
+        var y = margin + padding + ticketPaint.textHeight()
         canvas.drawText(
-            label.ticketNumber.ellipsize(ticketPaint, COMPACT_LABEL_WIDTH - 2 * padding),
-            padding,
+            label.ticketNumber.ellipsize(ticketPaint, right - left),
+            left,
             y,
             ticketPaint,
         )
 
-        y += 12f
+        y += 48f
+        canvas.drawText(label.bagLabel(), left, y, bagPaint)
 
-        // Row 2: Folio
-        y += folioPaint.textHeight()
-        val folioText = "#${label.dailyFolio}"
-        canvas.drawText(folioText, padding, y, folioPaint)
-
-        y += 10f
-
-        // Row 3: Customer name
-        y += bodyPaint.textHeight()
+        y += 52f
         canvas.drawText(
-            label.customerName.ellipsize(bodyPaint, COMPACT_LABEL_WIDTH - 2 * padding),
-            padding,
+            label.customerName.ifBlank { "Cliente" }.ellipsize(customerPaint, right - left),
+            left,
             y,
-            bodyPaint,
+            customerPaint,
         )
 
-        y += 10f
-
-        // Row 4: Service type
-        y += bodyPaint.textHeight()
+        y += 38f
         canvas.drawText(
-            label.serviceType.ellipsize(bodyPaint, COMPACT_LABEL_WIDTH - 2 * padding),
-            padding,
+            label.safePaymentLabel().ellipsize(paymentPaint, right - left),
+            left,
             y,
-            bodyPaint,
+            paymentPaint,
         )
 
-        y += 10f
+        y += 34f
+        canvas.drawText(label.deliveryLabel().ellipsize(metaPaint, right - left), left, y, metaPaint)
 
-        // Row 5: Date
-        y += smallPaint.textHeight()
-        canvas.drawText(label.date, padding, y, smallPaint)
+        canvas.drawText(label.shortIdLabel(), left, bottom - 28f, footerPaint)
+        canvas.drawText(label.copyLabel(), left, bottom, footerPaint)
 
         return bitmap
     }
@@ -218,6 +275,44 @@ object LabelRenderer {
 
     /** Descent-aware text height for layout purposes. */
     private fun Paint.textHeight(): Float = -fontMetrics.ascent
+
+    private fun LabelData.bagLabel(): String {
+        val safeTotal = totalBags.coerceIn(LabelData.MIN_BAG_COUNT, LabelData.MAX_BAG_COUNT)
+        val safeBag = bagNumber.coerceIn(LabelData.MIN_BAG_COUNT, safeTotal)
+        return "Bolsa $safeBag/$safeTotal"
+    }
+
+    private fun LabelData.copyLabel(): String = "Copia ${copyNumber.coerceAtLeast(1)}"
+
+    private fun LabelData.deliveryLabel(): String = "Entrega ${formatShortDate(promisedPickupDate)}"
+
+    private fun LabelData.safePaymentLabel(): String =
+        paymentLabel.trim().ifEmpty { LabelData.DEFAULT_PAYMENT_LABEL }
+
+    private fun LabelData.shortIdLabel(): String {
+        val shortId = ticketId
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+            ?.take(8)
+            ?.uppercase(Locale.US)
+            ?: "--"
+        return "ID $shortId"
+    }
+
+    private fun formatShortDate(dateValue: String?): String {
+        val raw = dateValue?.trim().orEmpty()
+        if (raw.isEmpty()) return "Sin fecha"
+
+        val datePart = raw
+            .substringBefore("T")
+            .substringBefore(" ")
+            .takeIf { it.isNotBlank() }
+            ?: return "Sin fecha"
+
+        return runCatching {
+            LocalDate.parse(datePart).format(SHORT_DATE_FORMATTER)
+        }.getOrDefault("Sin fecha")
+    }
 
     /**
      * Truncate [this] string with an ellipsis if it is wider than [maxWidth] pixels
@@ -233,6 +328,9 @@ object LabelRenderer {
         }
         return substring(0, end) + ellipsis
     }
+
+    private val SHORT_DATE_FORMATTER: DateTimeFormatter =
+        DateTimeFormatter.ofPattern("dd/MM/yy", Locale.forLanguageTag("es-MX"))
 }
 
 /**
