@@ -10,7 +10,7 @@
 
     <application
         android:name=".LcxApplication"
-        android:allowBackup="true"
+        android:allowBackup="${allowBackup}"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
@@ -18,7 +18,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.LCX"
-        android:usesCleartextTraffic="true"
+        android:usesCleartextTraffic="${usesCleartextTraffic}"
         tools:replace="android:fullBackupContent">
         <activity
             android:name=".MainActivity"

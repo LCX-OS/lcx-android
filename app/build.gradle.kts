@@ -336,8 +336,8 @@ android {
         applicationId = androidApplicationId
         minSdk = 33
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 100
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -354,6 +354,8 @@ android {
         )
         manifestPlaceholders["zettleRedirectScheme"] = zettleRedirectScheme
         manifestPlaceholders["zettleRedirectHost"] = zettleRedirectHost
+        manifestPlaceholders["allowBackup"] = "false"
+        manifestPlaceholders["usesCleartextTraffic"] = "false"
     }
 
     flavorDimensions += "environment"
@@ -368,6 +370,8 @@ android {
             buildConfigField("String", "SUPABASE_ANON_KEY", devSupabaseAnonKey.toBuildConfigString())
             buildConfigField("Boolean", "USE_REAL_ZETTLE", devUseRealZettle.toString())
             buildConfigField("Boolean", "USE_REAL_BROTHER", devUseRealBrother.toString())
+            manifestPlaceholders["allowBackup"] = "true"
+            manifestPlaceholders["usesCleartextTraffic"] = "true"
         }
         create("prod") {
             dimension = "environment"
@@ -377,6 +381,8 @@ android {
             buildConfigField("String", "SUPABASE_ANON_KEY", prodSupabaseAnonKey.toBuildConfigString())
             buildConfigField("Boolean", "USE_REAL_ZETTLE", prodUseRealZettle.toString())
             buildConfigField("Boolean", "USE_REAL_BROTHER", prodUseRealBrother.toString())
+            manifestPlaceholders["allowBackup"] = "false"
+            manifestPlaceholders["usesCleartextTraffic"] = "false"
         }
     }
 

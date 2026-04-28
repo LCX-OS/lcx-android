@@ -2,7 +2,7 @@
 
 Esta guia deja operativo el release Android con solo dos ambientes: `dev` y `prod`.
 El artefacto principal es el APK firmado generado por `:app:assembleProdRelease` para distribucion interna controlada.
-`bundleProdRelease` y Play Console pueden seguir existiendo, pero son secundarios.
+Para el 0->1 no se usa Google Play, Internal App Sharing ni AAB. `bundleProdRelease` puede seguir existiendo, pero es secundario.
 
 ## 1. Modelo de ambientes
 
@@ -14,6 +14,8 @@ El artefacto principal es el APK firmado generado por `:app:assembleProdRelease`
   - build operacional real
   - `USE_REAL_ZETTLE=true` y `USE_REAL_BROTHER=true` son obligatorios
   - no acepta placeholders ni valores dummy
+  - sale con `usesCleartextTraffic=false` y `allowBackup=false`
+  - mantiene `applicationId=com.cleanx.app` para Zettle real
 
 ## 2. Configuracion real de `prod` fuera de git
 
@@ -55,6 +57,7 @@ Notas:
 
 - `LCX_RELEASE_STORE_FILE` puede ser absoluto o relativo al root del repo.
 - `:app:verifyReleaseSigning` falla de forma explicita si falta alguna propiedad o si la keystore no existe.
+- Si `keytool` genera un store PKCS12, usa la misma contraseña para `LCX_RELEASE_STORE_PASSWORD` y `LCX_RELEASE_KEY_PASSWORD`.
 
 ### Opcion alternativa: `key.properties` local
 
@@ -82,9 +85,10 @@ keytool -genkeypair \
 Antes de un release interno:
 
 ```bash
+export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 ./gradlew :app:verifyProdConfig --console=plain
 ./gradlew :app:verifyReleaseSigning --console=plain
-./gradlew :app:assembleProdDebug --console=plain
+./gradlew test --console=plain
 ./gradlew :app:assembleProdRelease --console=plain
 ```
 
@@ -108,6 +112,22 @@ Salida esperada:
 - `app/build/outputs/apk/prod/release/app-prod-release.apk`
 
 Este es el canal default para este repo: APK firmado y distribuido por un medio interno controlado como MDM, drive corporativo o enlace privado.
+
+Para empaquetarlo para Drive privado:
+
+```bash
+scripts/release/package-private-apk.sh
+```
+
+Salida esperada:
+
+- `build/release-private/v1.0.0+100/app-prod-release.apk`
+- `build/release-private/v1.0.0+100/SHA256SUMS.txt`
+- `build/release-private/v1.0.0+100/SIGNING_CERTS.txt`
+- `build/release-private/v1.0.0+100/RELEASE_NOTES.md`
+- `build/release-private/v1.0.0+100/INSTALL_CHECKLIST.md`
+
+Sube el contenido de esa carpeta a Drive privado en `LCX Android Releases/v1.0.0+100/`.
 
 ### Artefacto opcional
 

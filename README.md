@@ -176,10 +176,12 @@ Si el AAR no existe, `dev` puede seguir compilando con fallback/stub. `prod` no.
 
 - Solo existen dos ambientes: `dev` y `prod`.
 - El artefacto principal de release es el APK firmado de `./gradlew :app:assembleProdRelease --console=plain`.
-- La distribucion por defecto es APK firmado por canal interno controlado; Play/AAB queda como opcion secundaria.
+- La distribucion 0->1 es APK firmado por Drive privado; Play/AAB queda fuera del flujo inicial.
 - Valida ambiente y signing con `./gradlew :app:verifyProdConfig :app:verifyReleaseSigning --console=plain`.
 - El `release` signing se configura fuera de git con `~/.gradle/gradle.properties` o `key.properties` local.
 - Guia operativa y checklist detallado: `docs/android-release.md`.
+- Rollout sin Google Play: `docs/private-apk-rollout.md`.
+- Paquete para Drive privado: `scripts/release/package-private-apk.sh`.
 - `./gradlew :app:bundleProdRelease --console=plain` puede seguir usandose si luego necesitas Play Console o Internal App Sharing, pero no es el flujo principal.
 - Para `prodRelease` con Zettle real, mantén `LCX_ANDROID_APPLICATION_ID=com.cleanx.app`.
 - `LCX_ZETTLE_GITHUB_TOKEN` solo hace falta cuando esta maquina necesita volver a resolver el SDK privado de Zettle desde GitHub Packages.

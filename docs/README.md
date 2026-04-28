@@ -4,6 +4,7 @@
 
 - [`README.md`](../README.md): repo overview, local setup, flavor config, common commands, and release entrypoint.
 - [`android-release.md`](android-release.md): signed `prodRelease` APK workflow, signing, and validation.
+- [`private-apk-rollout.md`](private-apk-rollout.md): Drive privado, instalacion y oleadas para el 0->1 sin Google Play.
 - [`api-contract-spec.md`](api-contract-spec.md): ticket API contract that Android must preserve.
 - [`architecture/domain-first-feature-pattern.md`](architecture/domain-first-feature-pattern.md): current feature/module structure guidance.
 - [`payload-capture-debug.md`](payload-capture-debug.md): debug-only HTTP payload capture workflow.
