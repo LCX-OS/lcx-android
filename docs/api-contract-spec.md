@@ -1,6 +1,6 @@
 # LCX API Contract Specification
 
-**Last Updated:** March 2, 2026
+**Last Updated:** May 5, 2026
 **Version:** 1.0
 **Audience:** Android Development Team (Kotlin)
 **Purpose:** Single source of truth for all API integrations in the mobile client
@@ -16,6 +16,9 @@
 5. [Enumerations](#enumerations)
 6. [Ticket Endpoints](#ticket-endpoints)
    - [POST /api/tickets](#post-apiticktes)
+   - [GET /api/ticket-support/catalogs](#get-apiticket-supportcatalogs)
+   - [GET /api/ticket-support/customers](#get-apiticket-supportcustomers)
+   - [POST /api/ticket-support/customers](#post-apiticket-supportcustomers)
    - [PATCH /api/tickets/:id/status](#patch-apiticketsidstatus)
    - [PATCH /api/tickets/:id/payment](#patch-apiticketsidpayment)
 7. [Important Behaviors](#important-behaviors)
@@ -25,7 +28,7 @@
 
 ## Overview
 
-The LCX API provides endpoints for managing laundry service tickets. This specification documents the contract for the three critical ticket management endpoints used by the Android client.
+The LCX API provides endpoints for managing laundry service tickets. This specification documents the contract for the critical ticket management endpoints and the temporary PWA ticket-support endpoints used by Android ticket creation.
 
 **Base URL:** To be configured per environment (`dev`/`prod`)
 
@@ -352,6 +355,106 @@ Create one or more tickets in a single batch request.
 - The server generates `ticket_number` and `daily_folio` automatically via database trigger.
 - Responses contain the server-normalized ticket objects; use these as the source of truth.
 - Audit log entries are written asynchronously (fire-and-forget).
+
+---
+
+### GET /api/ticket-support/catalogs
+
+Temporary canonical PWA endpoint for Android ticket creation support catalogs.
+
+**Authentication:** Required (Bearer token or session cookie)
+
+**Successful Response (HTTP 200)**
+
+```json
+{
+  "data": {
+    "services": [],
+    "add_ons": [],
+    "inventory_items": []
+  }
+}
+```
+
+Rules:
+
+- `services`: `active = true`, ordered by `name`.
+- `add_ons`: `active = true`, ordered by `name`.
+- `inventory_items`: `is_for_sale = true`, `quantity > 0`, `price > 0`, ordered by `item_name`.
+
+---
+
+### GET /api/ticket-support/customers
+
+Temporary canonical PWA endpoint for Android ticket creation customer search.
+
+**Authentication:** Required (Bearer token or session cookie)
+
+**Query Parameters**
+
+| Parameter | Rules |
+|-----------|-------|
+| `query` | Text searched against `full_name`, `phone`, `email`, and normalized phone |
+| `limit` | Optional, clamped to `1..25`; defaults to 8 |
+
+**Successful Response (HTTP 200)**
+
+```json
+{
+  "data": []
+}
+```
+
+---
+
+### POST /api/ticket-support/customers
+
+Temporary canonical PWA endpoint for Android ticket creation customer create.
+
+**Authentication:** Required (Bearer token or session cookie)
+
+**Body Schema**
+
+```json
+{
+  "full_name": "string",
+  "phone": "string",
+  "email": "string (optional)",
+  "notes": "string (optional)",
+  "allow_duplicate_phone": false
+}
+```
+
+Validation mirrors ticket creation UI behavior: `full_name` must be at least 2 characters, normalized `phone` must contain at least 7 digits, and `email` must be valid when present.
+
+**Successful Response (HTTP 200)**
+
+```json
+{
+  "data": {
+    "id": "customer uuid",
+    "full_name": "Ana Lopez",
+    "phone": "555-123-4567",
+    "phone_normalized": "5551234567",
+    "email": null,
+    "notes": null,
+    "created_by": "authenticated user uuid",
+    "created_at": "2026-05-05T10:30:00Z"
+  }
+}
+```
+
+**Duplicate Phone Response (HTTP 409)**
+
+```json
+{
+  "error": "Ya existe un cliente con este teléfono.",
+  "code": "CUSTOMER_DUPLICATE_PHONE",
+  "duplicate_phone_matches": []
+}
+```
+
+Retry the same request with `allow_duplicate_phone: true` only after explicit user confirmation.
 
 ---
 

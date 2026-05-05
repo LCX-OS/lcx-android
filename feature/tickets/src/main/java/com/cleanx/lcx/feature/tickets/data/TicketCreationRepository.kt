@@ -1,102 +1,77 @@
 package com.cleanx.lcx.feature.tickets.data
 
-import com.cleanx.lcx.core.network.SupabaseError
-import com.cleanx.lcx.core.network.SupabaseTableClient
-import com.cleanx.lcx.core.session.SessionProfileRepository
-import io.github.jan.supabase.postgrest.query.Order
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.json.Json
+import retrofit2.Response
 import javax.inject.Inject
 import javax.inject.Singleton
 
 private const val DEFAULT_CUSTOMER_SEARCH_LIMIT = 8
 private const val MAX_CUSTOMER_SEARCH_LIMIT = 25
-private const val DUPLICATE_PHONE_LIMIT = 5L
+private const val DUPLICATE_PHONE_CODE = "CUSTOMER_DUPLICATE_PHONE"
 
 @Singleton
 class TicketCreationRepository @Inject constructor(
-    private val supabase: SupabaseTableClient,
-    private val sessionProfileRepository: SessionProfileRepository,
+    private val api: TicketSupportApi,
+    private val json: Json,
 ) {
 
-    suspend fun loadCatalogs(): ApiResult<TicketCreationCatalogs> = coroutineScope {
-        val servicesDeferred = async {
-            supabase.selectWithRequest<ServiceCatalogRecord>("services_catalog") {
-                filter { eq("active", true) }
-                order("name", Order.ASCENDING)
-            }
-        }
-        val addOnsDeferred = async {
-            supabase.selectWithRequest<AddOnCatalogRecord>("add_ons_catalog") {
-                filter { eq("active", true) }
-                order("name", Order.ASCENDING)
-            }
-        }
-        val inventoryDeferred = async {
-            supabase.selectWithRequest<InventoryCatalogRecord>("inventory") {
-                filter {
-                    eq("is_for_sale", true)
-                    gt("quantity", 0)
-                    gt("price", 0)
-                }
-                order("item_name", Order.ASCENDING)
-            }
-        }
+    suspend fun loadCatalogs(): ApiResult<TicketCreationCatalogs> {
+        return try {
+            val response = api.getCatalogs()
 
-        val services = servicesDeferred.await().getOrElse { error ->
-            return@coroutineScope error.toApiError("No se pudo cargar el catalogo de servicios.")
-        }
-        val addOns = addOnsDeferred.await().getOrElse { error ->
-            return@coroutineScope error.toApiError("No se pudo cargar el catalogo de extras.")
-        }
-        val inventoryItems = inventoryDeferred.await().getOrElse { error ->
-            return@coroutineScope error.toApiError("No se pudo cargar el inventario vendible.")
-        }
+            if (!response.isSuccessful) {
+                return response.parseApiError("No se pudieron cargar los datos para crear encargos.")
+            }
 
-        ApiResult.Success(
-            TicketCreationCatalogs(
-                services = services.filter { it.active },
-                addOns = addOns.filter { it.active },
-                inventoryItems = filterSellableInventoryItems(inventoryItems),
-            ),
-        )
+            val data = response.body()?.data
+                ?: return ApiResult.Error(
+                    message = "Respuesta vacia del servidor.",
+                    httpStatus = response.code(),
+                )
+
+            ApiResult.Success(
+                TicketCreationCatalogs(
+                    services = data.services.filter { it.active },
+                    addOns = data.addOns.filter { it.active },
+                    inventoryItems = filterSellableInventoryItems(data.inventoryItems),
+                ),
+            )
+        } catch (error: Exception) {
+            ApiResult.Error(
+                message = error.message ?: "Error de conexion.",
+                httpStatus = 0,
+            )
+        }
     }
 
     suspend fun searchCustomers(
         query: String,
         limit: Int = DEFAULT_CUSTOMER_SEARCH_LIMIT,
-    ): ApiResult<List<CustomerRecord>> = coroutineScope {
+    ): ApiResult<List<CustomerRecord>> {
         val sanitizedQuery = sanitizeCustomerSearchToken(query)
         val normalizedQuery = normalizePhone(query)
 
         if (sanitizedQuery.isBlank() && normalizedQuery.isBlank()) {
-            return@coroutineScope ApiResult.Success(emptyList())
+            return ApiResult.Success(emptyList())
         }
 
-        val safeLimit = limit.coerceIn(1, MAX_CUSTOMER_SEARCH_LIMIT).toLong()
-        val requests = buildList {
-            if (sanitizedQuery.isNotBlank()) {
-                add(async { searchCustomersByColumn("full_name", sanitizedQuery, safeLimit) })
-                add(async { searchCustomersByColumn("phone", sanitizedQuery, safeLimit) })
-                add(async { searchCustomersByColumn("email", sanitizedQuery, safeLimit) })
-            }
-            if (normalizedQuery.isNotBlank()) {
-                add(async { searchCustomersByColumn("phone_normalized", normalizedQuery, safeLimit) })
-            }
-        }
+        val safeLimit = limit.coerceIn(1, MAX_CUSTOMER_SEARCH_LIMIT)
 
-        val merged = linkedMapOf<String, CustomerRecord>()
-        requests.awaitAll().forEach { result ->
-            val rows = result.getOrElse { error ->
-                return@coroutineScope error.toApiError("No se pudieron buscar clientes.")
-            }
-            rows.forEach { customer ->
-                merged.putIfAbsent(customer.id, customer)
-            }
-        }
+        return try {
+            val response = api.searchCustomers(query = query, limit = safeLimit)
 
-        ApiResult.Success(merged.values.take(safeLimit.toInt()))
+            if (!response.isSuccessful) {
+                return response.parseApiError("No se pudieron buscar clientes.")
+            }
+
+            ApiResult.Success(response.body()?.data ?: emptyList())
+        } catch (error: Exception) {
+            ApiResult.Error(
+                message = error.message ?: "Error de conexion.",
+                httpStatus = 0,
+            )
+        }
     }
 
     suspend fun createCustomer(
@@ -121,116 +96,79 @@ class TicketCreationRepository @Inject constructor(
             )
         }
 
-        val duplicatePhoneMatches = supabase.selectWithRequest<CustomerRecord>("customers") {
-            filter { eq("phone_normalized", normalizedPhone) }
-            order("created_at", Order.DESCENDING)
-            limit(DUPLICATE_PHONE_LIMIT)
-        }.getOrElse { error ->
-            return CustomerCreateResult(
-                errorMessage = error.toApiError("No se pudieron revisar telefonos duplicados.").message,
-                validationErrors = validationErrors,
-            )
-        }
-
-        if (duplicatePhoneMatches.isNotEmpty() && !allowDuplicatePhone) {
-            return CustomerCreateResult(
-                duplicatePhoneMatches = duplicatePhoneMatches,
-                requiresDuplicateConfirmation = true,
-                validationErrors = validationErrors,
-            )
-        }
-
-        val createdBy = runCatching {
-            sessionProfileRepository.getCurrentProfile().userId
-        }.getOrNull()
-
-        val payload = CustomerInsertPayload(
-            fullName = fullName,
-            phone = phone,
-            phoneNormalized = normalizedPhone,
-            email = email,
-            notes = notes,
-            createdBy = createdBy,
-        )
-
-        val customer = supabase.insertReturning<CustomerInsertPayload, CustomerRecord>(
-            table = "customers",
-            value = payload,
-        ).getOrElse { error ->
-            return CustomerCreateResult(
-                errorMessage = error.toApiError("No se pudo crear el cliente.").message,
-                duplicatePhoneMatches = duplicatePhoneMatches,
-                validationErrors = validationErrors,
-            )
-        }
-
-        return CustomerCreateResult(
-            customer = customer,
-            duplicatePhoneMatches = duplicatePhoneMatches,
-            validationErrors = validationErrors,
-        )
-    }
-
-    private suspend fun searchCustomersByColumn(
-        column: String,
-        token: String,
-        limit: Long,
-    ): Result<List<CustomerRecord>> {
-        return supabase.selectWithRequest("customers") {
-            filter { ilike(column, "%$token%") }
-            order("full_name", Order.ASCENDING)
-            limit(limit)
-        }
-    }
-
-    private fun Throwable.toApiError(defaultMessage: String): ApiResult.Error {
-        return when (this) {
-            is SupabaseError.Unauthorized -> ApiResult.Error(
-                code = "NOT_AUTHENTICATED",
-                message = message,
-                httpStatus = 401,
+        return try {
+            val response = api.createCustomer(
+                TicketSupportCreateCustomerRequest(
+                    fullName = fullName,
+                    phone = phone,
+                    email = email,
+                    notes = notes,
+                    allowDuplicatePhone = allowDuplicatePhone,
+                ),
             )
 
-            is SupabaseError.NotFound -> ApiResult.Error(
-                code = "NOT_FOUND",
-                message = message,
-                httpStatus = 404,
-            )
+            if (response.isSuccessful) {
+                val customer = response.body()?.data
+                    ?: return CustomerCreateResult(
+                        errorMessage = "Respuesta vacia del servidor.",
+                        validationErrors = validationErrors,
+                    )
 
-            is SupabaseError.BadRequest -> ApiResult.Error(
-                code = "BAD_REQUEST",
-                message = message,
-                httpStatus = statusCode ?: 400,
-            )
-
-            is SupabaseError.ServerError -> ApiResult.Error(
-                code = "SERVER_ERROR",
-                message = message,
-                httpStatus = statusCode ?: 500,
-            )
-
-            is SupabaseError.NetworkError -> ApiResult.Error(
-                code = "NETWORK_ERROR",
-                message = message,
-                httpStatus = 0,
-            )
-
-            is SupabaseError.Unknown -> ApiResult.Error(
-                code = "UNKNOWN",
-                message = message,
-                httpStatus = 0,
-            )
-
-            else -> ApiResult.Error(
-                message = message ?: defaultMessage,
-                httpStatus = 0,
-            )
-        }.let { error ->
-            if (error.message.isBlank()) {
-                error.copy(message = defaultMessage)
-            } else {
-                error
+                return CustomerCreateResult(
+                    customer = customer,
+                    validationErrors = validationErrors,
+                )
             }
+
+            val error = response.parseTicketSupportError("No se pudo crear el cliente.")
+            val responseValidationErrors = error.validationErrors?.toDomain() ?: validationErrors
+
+            if (error.code == DUPLICATE_PHONE_CODE) {
+                return CustomerCreateResult(
+                    duplicatePhoneMatches = error.duplicatePhoneMatches,
+                    requiresDuplicateConfirmation = true,
+                    validationErrors = responseValidationErrors,
+                )
+            }
+
+            CustomerCreateResult(
+                errorMessage = error.error.ifBlank { "No se pudo crear el cliente." },
+                duplicatePhoneMatches = error.duplicatePhoneMatches,
+                validationErrors = responseValidationErrors,
+            )
+        } catch (error: Exception) {
+            CustomerCreateResult(
+                errorMessage = error.message ?: "Error de conexion.",
+                validationErrors = validationErrors,
+            )
         }
+    }
+
+    private fun Response<*>.parseApiError(defaultMessage: String): ApiResult.Error {
+        val apiError = parseTicketSupportError(defaultMessage)
+        return ApiResult.Error(
+            code = apiError.code,
+            message = apiError.error.ifBlank { defaultMessage },
+            httpStatus = code(),
+            details = apiError.details,
+        )
+    }
+
+    private fun Response<*>.parseTicketSupportError(defaultMessage: String): TicketSupportErrorResponse {
+        val raw = errorBody()?.string()
+
+        return try {
+            if (raw.isNullOrBlank()) {
+                null
+            } else {
+                json.decodeFromString(TicketSupportErrorResponse.serializer(), raw)
+            }
+        } catch (_: SerializationException) {
+            null
+        } ?: TicketSupportErrorResponse(
+            error = defaultMessage,
+            code = null,
+            details = raw,
+        )
     }
 }
