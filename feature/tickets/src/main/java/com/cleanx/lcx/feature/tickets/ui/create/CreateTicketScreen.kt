@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CircularProgressIndicator
@@ -39,9 +40,15 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -65,6 +72,7 @@ import com.cleanx.lcx.feature.tickets.data.ServiceCatalogRecord
 import com.cleanx.lcx.feature.tickets.domain.create.CreateTicketUiState
 import com.cleanx.lcx.feature.tickets.domain.create.CustomerPickerUiState
 import com.cleanx.lcx.feature.tickets.domain.create.EncargoPaymentChoice
+import com.cleanx.lcx.feature.tickets.ui.inventory.InventoryBarcodeScannerButton
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -305,6 +313,8 @@ fun CreateTicketScreen(
                                     quantities = state.inventoryQuantities,
                                     enabled = !state.isSubmitting,
                                     onQueryChanged = viewModel::onInventorySearchQueryChanged,
+                                    onSearchSubmitted = viewModel::submitInventorySearch,
+                                    onBarcodeScanned = viewModel::scanInventoryBarcode,
                                     onAdjustQuantity = viewModel::adjustInventoryQuantity,
                                 )
                             }
@@ -788,6 +798,8 @@ private fun InventorySection(
     quantities: Map<String, Int>,
     enabled: Boolean,
     onQueryChanged: (String) -> Unit,
+    onSearchSubmitted: () -> Unit,
+    onBarcodeScanned: (String) -> Unit,
     onAdjustQuantity: (String, Int) -> Unit,
 ) {
     LcxCard(title = "Productos de inventario") {
@@ -796,12 +808,30 @@ private fun InventorySection(
             onValueChange = onQueryChanged,
             label = "Buscar por nombre, SKU o codigo de barras",
             enabled = enabled,
+            imeAction = ImeAction.Search,
+            keyboardActions = KeyboardActions(
+                onSearch = { onSearchSubmitted() },
+                onDone = { onSearchSubmitted() },
+            ),
+            modifier = Modifier.onPreviewKeyEvent { event ->
+                if (event.type == KeyEventType.KeyUp && event.key == Key.Enter) {
+                    onSearchSubmitted()
+                    true
+                } else {
+                    false
+                }
+            },
         )
         Spacer(modifier = Modifier.height(LcxSpacing.xs))
         Text(
-            text = "Este campo tambien sirve para scanner fisico que escribe texto en la entrada.",
+            text = "Escanea con camara o usa un scanner fisico y presiona Enter para agregar una coincidencia exacta.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.height(LcxSpacing.sm))
+        InventoryBarcodeScannerButton(
+            enabled = enabled,
+            onBarcodeScanned = onBarcodeScanned,
         )
 
         Spacer(modifier = Modifier.height(LcxSpacing.md))
@@ -828,6 +858,7 @@ private fun InventorySection(
                         price = item.price,
                         quantity = quantities[item.id] ?: 0,
                         enabled = enabled,
+                        canIncrease = (quantities[item.id] ?: 0) < item.quantity,
                         onDecrease = { onAdjustQuantity(item.id, -1) },
                         onIncrease = { onAdjustQuantity(item.id, 1) },
                     )
@@ -1004,6 +1035,7 @@ private fun QuantityRow(
     price: Double,
     quantity: Int,
     enabled: Boolean,
+    canIncrease: Boolean = true,
     onDecrease: () -> Unit,
     onIncrease: () -> Unit,
 ) {
@@ -1039,6 +1071,7 @@ private fun QuantityRow(
             LcxQuantityStepper(
                 quantity = quantity,
                 enabled = enabled,
+                canIncrease = canIncrease,
                 onDecrease = onDecrease,
                 onIncrease = onIncrease,
             )

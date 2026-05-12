@@ -1,7 +1,9 @@
 package com.cleanx.lcx.feature.tickets.domain.create
 
 import com.cleanx.lcx.feature.tickets.data.AddOnCatalogRecord
+import com.cleanx.lcx.feature.tickets.data.InventoryCatalogRecord
 import com.cleanx.lcx.feature.tickets.data.ServiceCatalogRecord
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -111,5 +113,89 @@ class CreateTicketReducerTest {
         assertFalse(result.customer.isSearching)
         assertTrue(result.customer.searchResults.isEmpty())
         assertEquals("j", result.customer.searchQuery)
+    }
+
+    @Test
+    fun `inventory lookup submission adds exact barcode match and clears query`() {
+        val inventory = inventoryItem(
+            id = "bag-small",
+            itemName = "Bolsa chica",
+            quantity = 3,
+            sku = "BOLSA-CH",
+            barcode = "7501234567890",
+        )
+        val current = CreateTicketUiState(
+            inventoryItems = listOf(inventory),
+            inventorySearchQuery = "7501234567890",
+        )
+
+        val result = reducer(
+            current,
+            CreateTicketMutation.InventoryLookupSubmitted("7501234567890"),
+        )
+
+        assertEquals("", result.inventorySearchQuery)
+        assertEquals(mapOf("bag-small" to 1), result.inventoryQuantities)
+        assertNull(result.error)
+    }
+
+    @Test
+    fun `inventory quantity cannot exceed available stock`() {
+        val inventory = inventoryItem(
+            id = "bag-small",
+            itemName = "Bolsa chica",
+            quantity = 1,
+            sku = "BOLSA-CH",
+            barcode = "7501234567890",
+        )
+        val current = CreateTicketUiState(
+            inventoryItems = listOf(inventory),
+            inventoryQuantities = mapOf("bag-small" to 1),
+        )
+
+        val result = reducer(
+            current,
+            CreateTicketMutation.InventoryQuantityAdjusted("bag-small", 1),
+        )
+
+        assertEquals(mapOf("bag-small" to 1), result.inventoryQuantities)
+        assertEquals("No hay stock suficiente para Bolsa chica. Disponible: 1 pieza.", result.error)
+    }
+
+    @Test
+    fun `inventory lookup not found keeps scanned value for visible search`() {
+        val result = reducer(
+            CreateTicketUiState(inventoryItems = emptyList()),
+            CreateTicketMutation.InventoryLookupSubmitted("missing-code"),
+        )
+
+        assertEquals("missing-code", result.inventorySearchQuery)
+        assertEquals(
+            "No se encontro un producto vendible con SKU o codigo \"missing-code\".",
+            result.error,
+        )
+    }
+
+    private fun inventoryItem(
+        id: String,
+        itemName: String,
+        quantity: Int,
+        sku: String?,
+        barcode: String?,
+    ): InventoryCatalogRecord {
+        return InventoryCatalogRecord(
+            id = id,
+            itemName = itemName,
+            category = "Productos",
+            quantity = quantity,
+            unit = "pieza",
+            minQuantity = 0,
+            price = 10.0,
+            isForSale = true,
+            sku = sku,
+            barcode = barcode,
+            productCode = null,
+            branch = "Sucursal Centro",
+        )
     }
 }

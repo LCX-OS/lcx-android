@@ -227,6 +227,7 @@ fun LcxQuantityStepper(
     onIncrease: () -> Unit,
     enabled: Boolean,
     modifier: Modifier = Modifier,
+    canIncrease: Boolean = true,
 ) {
     Row(
         modifier = modifier,
@@ -249,7 +250,7 @@ fun LcxQuantityStepper(
         )
         TextButton(
             onClick = onIncrease,
-            enabled = enabled,
+            enabled = enabled && canIncrease,
             modifier = Modifier.defaultMinSize(minWidth = 48.dp, minHeight = 48.dp),
         ) {
             Text("+")

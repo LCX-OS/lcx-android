@@ -18,6 +18,9 @@ import com.cleanx.lcx.feature.tickets.data.CustomerRecord
 import com.cleanx.lcx.feature.tickets.data.CustomerValidationErrors
 import com.cleanx.lcx.feature.tickets.data.InventoryCatalogRecord
 import com.cleanx.lcx.feature.tickets.data.ServiceCatalogRecord
+import com.cleanx.lcx.feature.tickets.data.findInventoryItemBySkuOrBarcode
+import com.cleanx.lcx.feature.tickets.data.inventoryLookupNotFoundMessage
+import com.cleanx.lcx.feature.tickets.data.inventoryStockLimitMessage
 import com.cleanx.lcx.feature.tickets.data.normalizePhone
 import com.cleanx.lcx.feature.tickets.data.toDraft
 import com.cleanx.lcx.feature.tickets.domain.create.CreateCustomerUseCase
@@ -420,15 +423,36 @@ class SalesViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 inventorySearchQuery = value,
+                error = null,
                 successMessage = null,
             )
         }
     }
 
+    fun submitInventorySearch() {
+        addInventoryBySkuOrBarcode(_uiState.value.inventorySearchQuery)
+    }
+
+    fun scanInventoryBarcode(value: String) {
+        addInventoryBySkuOrBarcode(value)
+    }
+
     fun adjustQuantity(itemId: String, delta: Int) {
         _uiState.update { state ->
             val currentQuantity = state.cart[itemId] ?: 0
-            val nextQuantity = (currentQuantity + delta).coerceAtLeast(0)
+            val inventoryItem = state.inventoryItems.firstOrNull { it.id == itemId }
+            if (delta > 0 && inventoryItem != null && currentQuantity >= inventoryItem.quantity) {
+                return@update state.copy(
+                    error = inventoryStockLimitMessage(inventoryItem),
+                    successMessage = null,
+                )
+            }
+
+            val nextQuantity = if (inventoryItem != null) {
+                (currentQuantity + delta).coerceIn(0, inventoryItem.quantity)
+            } else {
+                (currentQuantity + delta).coerceAtLeast(0)
+            }
             val nextCart = state.cart.toMutableMap().apply {
                 if (nextQuantity == 0) {
                     remove(itemId)
@@ -447,6 +471,47 @@ class SalesViewModel @Inject constructor(
                 error = null,
                 successMessage = null,
             )
+        }
+    }
+
+    private fun addInventoryBySkuOrBarcode(rawValue: String) {
+        val lookup = rawValue.trim()
+        if (lookup.isBlank()) return
+
+        _uiState.update { state ->
+            val item = findInventoryItemBySkuOrBarcode(state.inventoryItems, lookup)
+            if (item == null) {
+                state.copy(
+                    inventorySearchQuery = rawValue,
+                    error = inventoryLookupNotFoundMessage(lookup),
+                    successMessage = null,
+                )
+            } else {
+                val currentQuantity = state.cart[item.id] ?: 0
+                if (currentQuantity >= item.quantity) {
+                    state.copy(
+                        inventorySearchQuery = "",
+                        error = inventoryStockLimitMessage(item),
+                        successMessage = null,
+                    )
+                } else {
+                    val nextCart = state.cart.toMutableMap().apply {
+                        put(item.id, currentQuantity + 1)
+                    }
+                    state.withCatalogSnapshot(
+                        snapshot = SalesCatalogSnapshot(
+                            equipmentServices = state.equipmentServices,
+                            productAddOns = state.productAddOns,
+                            inventoryItems = state.inventoryItems,
+                        ),
+                        cart = nextCart,
+                    ).copy(
+                        inventorySearchQuery = "",
+                        error = null,
+                        successMessage = "Agregado: ${item.itemName}",
+                    )
+                }
+            }
         }
     }
 

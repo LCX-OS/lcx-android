@@ -164,6 +164,14 @@ class CreateTicketViewModel @Inject constructor(
         mutate(CreateTicketMutation.InventorySearchQueryChanged(value))
     }
 
+    fun submitInventorySearch() {
+        mutate(CreateTicketMutation.InventoryLookupSubmitted(_uiState.value.inventorySearchQuery))
+    }
+
+    fun scanInventoryBarcode(value: String) {
+        mutate(CreateTicketMutation.InventoryLookupSubmitted(value))
+    }
+
     fun setSharedMachinePool(enabled: Boolean) {
         mutate(CreateTicketMutation.SharedMachinePoolChanged(enabled))
     }

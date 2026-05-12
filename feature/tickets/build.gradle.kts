@@ -33,10 +33,19 @@ dependencies {
 
     // Compose
     implementation(platform(libs.compose.bom))
+    implementation(libs.compose.activity)
     implementation(libs.compose.ui)
     implementation(libs.compose.material3)
     implementation(libs.compose.ui.tooling.preview)
     debugImplementation(libs.compose.ui.tooling)
+
+    // Camera barcode scanning
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.camerax.core)
+    implementation(libs.camerax.camera2)
+    implementation(libs.camerax.lifecycle)
+    implementation(libs.camerax.view)
+    implementation(libs.mlkit.barcode.scanning)
 
     // Hilt
     implementation(libs.hilt.android)

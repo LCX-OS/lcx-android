@@ -5,7 +5,11 @@ import com.cleanx.lcx.core.model.Ticket
 import com.cleanx.lcx.feature.tickets.data.CustomerCreateInput
 import com.cleanx.lcx.feature.tickets.data.CustomerRecord
 import com.cleanx.lcx.feature.tickets.data.CustomerValidationErrors
+import com.cleanx.lcx.feature.tickets.data.InventoryCatalogRecord
 import com.cleanx.lcx.feature.tickets.data.calculateEncargoPricing
+import com.cleanx.lcx.feature.tickets.data.findInventoryItemBySkuOrBarcode
+import com.cleanx.lcx.feature.tickets.data.inventoryLookupNotFoundMessage
+import com.cleanx.lcx.feature.tickets.data.inventoryStockLimitMessage
 import com.cleanx.lcx.feature.tickets.data.normalizePhone
 import com.cleanx.lcx.feature.tickets.data.toDraft
 import javax.inject.Inject
@@ -46,6 +50,7 @@ sealed interface CreateTicketMutation {
     data class WeightChanged(val value: String) : CreateTicketMutation
     data class PickupEstimateChanged(val value: String) : CreateTicketMutation
     data class InventorySearchQueryChanged(val value: String) : CreateTicketMutation
+    data class InventoryLookupSubmitted(val value: String) : CreateTicketMutation
     data class SharedMachinePoolChanged(val enabled: Boolean) : CreateTicketMutation
     data class SpecialItemToggled(val itemId: String) : CreateTicketMutation
     data class SpecialItemNotesChanged(val value: String) : CreateTicketMutation
@@ -321,6 +326,10 @@ class CreateTicketReducer @Inject constructor() {
                 error = null,
             )
 
+            is CreateTicketMutation.InventoryLookupSubmitted -> current.addInventoryBySkuOrBarcode(
+                rawValue = mutation.value,
+            )
+
             is CreateTicketMutation.SharedMachinePoolChanged -> current.copy(
                 useSharedMachinePool = mutation.enabled,
                 error = null,
@@ -352,8 +361,14 @@ class CreateTicketReducer @Inject constructor() {
                 inventoryQuantities = current.inventoryQuantities.adjustQuantity(
                     itemId = mutation.itemId,
                     delta = mutation.delta,
+                    maxValue = current.inventoryItems.firstOrNull { it.id == mutation.itemId }?.quantity,
                 ),
-                error = null,
+                error = inventoryLimitError(
+                    itemId = mutation.itemId,
+                    delta = mutation.delta,
+                    quantities = current.inventoryQuantities,
+                    items = current.inventoryItems,
+                ),
             )
 
             is CreateTicketMutation.ExtraToggled -> current.copy(
@@ -435,8 +450,61 @@ class CreateTicketReducer @Inject constructor() {
             paymentChoice != EncargoPaymentChoice.PENDING
     }
 
-    private fun Map<String, Int>.adjustQuantity(itemId: String, delta: Int): Map<String, Int> {
-        val nextValue = ((this[itemId] ?: 0) + delta).coerceAtLeast(0)
+    private fun CreateTicketUiState.addInventoryBySkuOrBarcode(rawValue: String): CreateTicketUiState {
+        val lookup = rawValue.trim()
+        if (lookup.isBlank()) return copy(error = null)
+
+        val item = findInventoryItemBySkuOrBarcode(inventoryItems, lookup)
+        if (item == null) {
+            return copy(
+                inventorySearchQuery = rawValue,
+                error = inventoryLookupNotFoundMessage(lookup),
+            )
+        }
+
+        val currentQuantity = inventoryQuantities[item.id] ?: 0
+        if (currentQuantity >= item.quantity) {
+            return copy(
+                inventorySearchQuery = "",
+                error = inventoryStockLimitMessage(item),
+            )
+        }
+
+        return copy(
+            inventorySearchQuery = "",
+            inventoryQuantities = inventoryQuantities.adjustQuantity(
+                itemId = item.id,
+                delta = 1,
+                maxValue = item.quantity,
+            ),
+            error = null,
+        )
+    }
+
+    private fun inventoryLimitError(
+        itemId: String,
+        delta: Int,
+        quantities: Map<String, Int>,
+        items: List<InventoryCatalogRecord>,
+    ): String? {
+        if (delta <= 0) return null
+
+        val item = items.firstOrNull { it.id == itemId } ?: return null
+        val currentQuantity = quantities[itemId] ?: 0
+        return if (currentQuantity >= item.quantity) {
+            inventoryStockLimitMessage(item)
+        } else {
+            null
+        }
+    }
+
+    private fun Map<String, Int>.adjustQuantity(
+        itemId: String,
+        delta: Int,
+        maxValue: Int? = null,
+    ): Map<String, Int> {
+        val rawNextValue = ((this[itemId] ?: 0) + delta).coerceAtLeast(0)
+        val nextValue = maxValue?.let { rawNextValue.coerceAtMost(it) } ?: rawNextValue
         return toMutableMap().apply {
             if (nextValue == 0) remove(itemId) else put(itemId, nextValue)
         }

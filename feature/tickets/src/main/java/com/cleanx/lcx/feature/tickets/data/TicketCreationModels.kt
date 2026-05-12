@@ -252,6 +252,28 @@ fun filterSellableInventoryItems(items: List<InventoryCatalogRecord>): List<Inve
     return items.filter(::isSellableInventoryItem)
 }
 
+fun findInventoryItemBySkuOrBarcode(
+    items: List<InventoryCatalogRecord>,
+    rawValue: String,
+): InventoryCatalogRecord? {
+    val lookup = rawValue.trim()
+    if (lookup.isBlank()) return null
+
+    return items.firstOrNull { item ->
+        listOf(item.sku, item.barcode)
+            .filterNotNull()
+            .any { value -> value.trim().equals(lookup, ignoreCase = true) }
+    }
+}
+
+fun inventoryStockLimitMessage(item: InventoryCatalogRecord): String {
+    return "No hay stock suficiente para ${item.itemName}. Disponible: ${item.quantity} ${item.unit}."
+}
+
+fun inventoryLookupNotFoundMessage(rawValue: String): String {
+    return "No se encontro un producto vendible con SKU o codigo \"$rawValue\"."
+}
+
 fun expandIdsByQuantity(quantities: Map<String, Int>): List<String> {
     val ids = mutableListOf<String>()
     quantities.forEach { (id, quantity) ->
