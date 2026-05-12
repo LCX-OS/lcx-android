@@ -1,5 +1,7 @@
 package com.cleanx.lcx.feature.tickets.ui.create
 
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -45,6 +47,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -64,6 +67,7 @@ import com.cleanx.lcx.core.ui.LcxConfirmationDialog
 import com.cleanx.lcx.core.ui.LcxQuantityStepper
 import com.cleanx.lcx.core.ui.LcxStepHeader
 import com.cleanx.lcx.core.ui.LcxStickyActionBar
+import com.cleanx.lcx.core.ui.LcxStatusPill
 import com.cleanx.lcx.core.ui.LcxTextField
 import com.cleanx.lcx.feature.tickets.data.AddOnCatalogRecord
 import com.cleanx.lcx.feature.tickets.data.CustomerRecord
@@ -72,8 +76,49 @@ import com.cleanx.lcx.feature.tickets.data.ServiceCatalogRecord
 import com.cleanx.lcx.feature.tickets.domain.create.CreateTicketUiState
 import com.cleanx.lcx.feature.tickets.domain.create.CustomerPickerUiState
 import com.cleanx.lcx.feature.tickets.domain.create.EncargoPaymentChoice
+import com.cleanx.lcx.feature.tickets.domain.create.hasSelectedCustomer
+import com.cleanx.lcx.feature.tickets.domain.create.parsedWeightOrZero
 import com.cleanx.lcx.feature.tickets.ui.inventory.InventoryBarcodeScannerButton
 import kotlinx.coroutines.delay
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
+import java.util.Locale
+
+private val PickupInputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm")
+private val PickupDisplayFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
+
+private enum class CreateTicketStep(
+    val title: String,
+    val summary: String,
+) {
+    CUSTOMER("Cliente", "Buscar o crear"),
+    SERVICE("Servicio", "Peso y entrega"),
+    ADD_ONS("Extras", "Ropa, productos y notas"),
+    PAYMENT("Pago", "Resumen final");
+
+    fun next(): CreateTicketStep {
+        val steps = entries
+        return steps[(ordinal + 1).coerceAtMost(steps.lastIndex)]
+    }
+
+    fun previous(): CreateTicketStep {
+        val steps = entries
+        return steps[(ordinal - 1).coerceAtLeast(0)]
+    }
+}
+
+private data class PriceLookupItem(
+    val title: String,
+    val subtitle: String,
+    val price: Double,
+)
+
+private data class SummaryLineItem(
+    val label: String,
+    val detail: String,
+    val value: String,
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,6 +131,8 @@ fun CreateTicketScreen(
     val state by viewModel.uiState.collectAsState()
     var showSuccess by rememberSaveable { mutableStateOf(false) }
     var showExitDialog by rememberSaveable { mutableStateOf(false) }
+    var currentStep by rememberSaveable { mutableStateOf(CreateTicketStep.CUSTOMER) }
+    var priceLookupQuery by rememberSaveable { mutableStateOf("") }
 
     val visibleInventoryItems = remember(
         state.inventoryItems,
@@ -169,6 +216,14 @@ fun CreateTicketScreen(
         bottomBar = {
             AnimatedVisibility(visible = !showSuccess) {
                 LcxStickyActionBar {
+                    if (currentStep != CreateTicketStep.CUSTOMER) {
+                        LcxButton(
+                            text = "Atras",
+                            onClick = { currentStep = currentStep.previous() },
+                            enabled = !state.isSubmitting,
+                            variant = ButtonVariant.Secondary,
+                        )
+                    }
                     Column(verticalArrangement = Arrangement.spacedBy(LcxSpacing.xs)) {
                         Text(
                             text = "Total",
@@ -182,8 +237,23 @@ fun CreateTicketScreen(
                         )
                     }
                     LcxButton(
-                        text = "Confirmar encargo",
-                        onClick = viewModel::submit,
+                        text = if (currentStep == CreateTicketStep.PAYMENT) {
+                            "Confirmar encargo"
+                        } else {
+                            "Siguiente"
+                        },
+                        onClick = {
+                            if (currentStep == CreateTicketStep.PAYMENT) {
+                                val blockingStep = firstBlockingStep(state)
+                                if (blockingStep != null) {
+                                    currentStep = blockingStep
+                                } else {
+                                    viewModel.submit()
+                                }
+                            } else {
+                                currentStep = currentStep.next()
+                            }
+                        },
                         isLoading = state.isSubmitting,
                         enabled = !state.isLoadingCatalogs && !state.customer.isSaving,
                         modifier = Modifier.weight(1f),
@@ -248,104 +318,141 @@ fun CreateTicketScreen(
                             }
 
                             item {
-                                LcxStepHeader(
-                                    step = 1,
-                                    title = "Cliente",
-                                    summary = "Datos del encargo",
-                                )
+                                CatalogStatusSection(state = state)
                             }
 
                             item {
-                                CustomerSection(
+                                PriceLookupSection(
                                     state = state,
-                                    onSearchQueryChanged = viewModel::onCustomerSearchQueryChanged,
-                                    onOpenCreateForm = viewModel::openCreateCustomerForm,
-                                    onCancelCreateForm = viewModel::cancelCreateCustomerForm,
-                                    onClearSelectedCustomer = viewModel::clearSelectedCustomer,
-                                    onCustomerSelected = viewModel::selectCustomer,
-                                    onCustomerFullNameChanged = viewModel::onCustomerFullNameChanged,
-                                    onCustomerPhoneChanged = viewModel::onCustomerPhoneChanged,
-                                    onCustomerEmailChanged = viewModel::onCustomerEmailChanged,
-                                    onCustomerNotesChanged = viewModel::onCustomerNotesChanged,
-                                    onCreateCustomer = viewModel::createCustomer,
+                                    query = priceLookupQuery,
+                                    onQueryChanged = { priceLookupQuery = it },
                                 )
                             }
 
                             item {
-                                LcxStepHeader(
-                                    step = 2,
-                                    title = "Servicio",
-                                    summary = "Peso, entrega, extras y productos",
+                                CreateTicketStepTabs(
+                                    selectedStep = currentStep,
+                                    onStepSelected = { currentStep = it },
                                 )
                             }
 
-                            item {
-                                ServiceSection(
-                                    state = state,
-                                    onBaseServiceSelected = viewModel::onBaseServiceSelected,
-                                    onWeightChanged = viewModel::onWeightChanged,
-                                    onPickupEstimateChanged = viewModel::onPickupEstimateChanged,
-                                )
-                            }
+                            when (currentStep) {
+                                CreateTicketStep.CUSTOMER -> {
+                                    item {
+                                        LcxStepHeader(
+                                            step = 1,
+                                            title = "Cliente",
+                                            summary = "Datos del encargo",
+                                        )
+                                    }
 
-                            item {
-                                BeddingSection(
-                                    items = state.beddingItems,
-                                    quantities = state.beddingQuantities,
-                                    enabled = !state.isSubmitting,
-                                    onAdjustQuantity = viewModel::adjustBeddingQuantity,
-                                )
-                            }
+                                    item {
+                                        CustomerSection(
+                                            state = state,
+                                            onSearchQueryChanged = viewModel::onCustomerSearchQueryChanged,
+                                            onOpenCreateForm = viewModel::openCreateCustomerForm,
+                                            onCancelCreateForm = viewModel::cancelCreateCustomerForm,
+                                            onClearSelectedCustomer = viewModel::clearSelectedCustomer,
+                                            onCustomerSelected = viewModel::selectCustomer,
+                                            onCustomerFullNameChanged = viewModel::onCustomerFullNameChanged,
+                                            onCustomerPhoneChanged = viewModel::onCustomerPhoneChanged,
+                                            onCustomerEmailChanged = viewModel::onCustomerEmailChanged,
+                                            onCustomerNotesChanged = viewModel::onCustomerNotesChanged,
+                                            onCreateCustomer = viewModel::createCustomer,
+                                        )
+                                    }
+                                }
 
-                            item {
-                                ExtrasSection(
-                                    items = state.extraItems,
-                                    selectedIds = state.selectedExtraIds,
-                                    enabled = !state.isSubmitting,
-                                    onToggleExtra = viewModel::toggleExtra,
-                                )
-                            }
+                                CreateTicketStep.SERVICE -> {
+                                    item {
+                                        LcxStepHeader(
+                                            step = 2,
+                                            title = "Servicio",
+                                            summary = "Peso y entrega",
+                                        )
+                                    }
 
-                            item {
-                                InventorySection(
-                                    query = state.inventorySearchQuery,
-                                    items = visibleInventoryItems,
-                                    quantities = state.inventoryQuantities,
-                                    enabled = !state.isSubmitting,
-                                    onQueryChanged = viewModel::onInventorySearchQueryChanged,
-                                    onSearchSubmitted = viewModel::submitInventorySearch,
-                                    onBarcodeScanned = viewModel::scanInventoryBarcode,
-                                    onAdjustQuantity = viewModel::adjustInventoryQuantity,
-                                )
-                            }
+                                    item {
+                                        ServiceSection(
+                                            state = state,
+                                            onBaseServiceSelected = viewModel::onBaseServiceSelected,
+                                            onWeightChanged = viewModel::onWeightChanged,
+                                            onPickupEstimateChanged = viewModel::onPickupEstimateChanged,
+                                        )
+                                    }
+                                }
 
-                            item {
-                                SpecialHandlingSection(
-                                    state = state,
-                                    onSharedMachinePoolChanged = viewModel::setSharedMachinePool,
-                                    onToggleSpecialItem = viewModel::toggleSpecialItem,
-                                    onSpecialNotesChanged = viewModel::onSpecialItemNotesChanged,
-                                )
-                            }
+                                CreateTicketStep.ADD_ONS -> {
+                                    item {
+                                        LcxStepHeader(
+                                            step = 3,
+                                            title = "Extras",
+                                            summary = "Ropa, productos y manejo especial",
+                                        )
+                                    }
 
-                            item {
-                                LcxStepHeader(
-                                    step = 3,
-                                    title = "Pago y resumen",
-                                    summary = "Total y estado de pago",
-                                )
-                            }
+                                    item {
+                                        BeddingSection(
+                                            items = state.beddingItems,
+                                            quantities = state.beddingQuantities,
+                                            enabled = !state.isSubmitting,
+                                            onAdjustQuantity = viewModel::adjustBeddingQuantity,
+                                        )
+                                    }
 
-                            item {
-                                PaymentSection(
-                                    state = state,
-                                    onChoiceChanged = viewModel::onPaymentChoiceChanged,
-                                    onMethodChanged = viewModel::onPaymentMethodChanged,
-                                )
-                            }
+                                    item {
+                                        ExtrasSection(
+                                            items = state.extraItems,
+                                            selectedIds = state.selectedExtraIds,
+                                            enabled = !state.isSubmitting,
+                                            onToggleExtra = viewModel::toggleExtra,
+                                        )
+                                    }
 
-                            item {
-                                SummarySection(state = state)
+                                    item {
+                                        InventorySection(
+                                            query = state.inventorySearchQuery,
+                                            items = visibleInventoryItems,
+                                            quantities = state.inventoryQuantities,
+                                            enabled = !state.isSubmitting,
+                                            onQueryChanged = viewModel::onInventorySearchQueryChanged,
+                                            onSearchSubmitted = viewModel::submitInventorySearch,
+                                            onBarcodeScanned = viewModel::scanInventoryBarcode,
+                                            onAdjustQuantity = viewModel::adjustInventoryQuantity,
+                                        )
+                                    }
+
+                                    item {
+                                        SpecialHandlingSection(
+                                            state = state,
+                                            onSharedMachinePoolChanged = viewModel::setSharedMachinePool,
+                                            onToggleSpecialItem = viewModel::toggleSpecialItem,
+                                            onSpecialNotesChanged = viewModel::onSpecialItemNotesChanged,
+                                        )
+                                    }
+                                }
+
+                                CreateTicketStep.PAYMENT -> {
+                                    item {
+                                        LcxStepHeader(
+                                            step = 4,
+                                            title = "Pago y resumen",
+                                            summary = "Total y estado de pago",
+                                        )
+                                    }
+
+                                    item {
+                                        PaymentSection(
+                                            state = state,
+                                            onChoiceChanged = viewModel::onPaymentChoiceChanged,
+                                            onMethodChanged = viewModel::onPaymentMethodChanged,
+                                        )
+                                    }
+
+                                    item {
+                                        SummarySection(state = state)
+                                    }
+                                }
                             }
 
                             state.error?.let { message ->
@@ -386,6 +493,131 @@ fun CreateTicketScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun CatalogStatusSection(state: CreateTicketUiState) {
+    LcxCard(title = "Catalogo vivo") {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(LcxSpacing.xs),
+            ) {
+                Text(
+                    text = "Precios desde DB real",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                )
+                Text(
+                    text = buildCatalogStatusText(state),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            LcxStatusPill(
+                label = "Live",
+                tint = LcxSuccess,
+            )
+        }
+    }
+}
+
+@Composable
+private fun PriceLookupSection(
+    state: CreateTicketUiState,
+    query: String,
+    onQueryChanged: (String) -> Unit,
+) {
+    val results = remember(state.services, state.extraItems, state.inventoryItems, query) {
+        buildPriceLookupItems(state, query)
+    }
+
+    LcxCard(title = "Consulta rapida de precios") {
+        LcxTextField(
+            value = query,
+            onValueChange = onQueryChanged,
+            label = "Buscar servicio, extra o producto",
+            enabled = !state.isSubmitting,
+        )
+        Spacer(modifier = Modifier.height(LcxSpacing.sm))
+
+        if (results.isEmpty()) {
+            Text(
+                text = if (query.isBlank()) {
+                    "Busca por nombre, SKU o codigo para consultar precios sin modificar el ticket."
+                } else {
+                    "No hay precios que coincidan con la busqueda."
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(LcxSpacing.xs)) {
+                results.forEach { item ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = item.title,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Text(
+                                text = item.subtitle,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                        Text(
+                            text = formatCurrency(item.price),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CreateTicketStepTabs(
+    selectedStep: CreateTicketStep,
+    onStepSelected: (CreateTicketStep) -> Unit,
+) {
+    LcxCard {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(LcxSpacing.sm),
+            verticalArrangement = Arrangement.spacedBy(LcxSpacing.xs),
+        ) {
+            CreateTicketStep.entries.forEachIndexed { index, step ->
+                FilterChip(
+                    selected = selectedStep == step,
+                    onClick = { onStepSelected(step) },
+                    label = {
+                        Text("${index + 1}. ${step.title}")
+                    },
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(LcxSpacing.xs))
+        Text(
+            text = selectedStep.summary,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -710,11 +942,10 @@ private fun ServiceSection(
 
         Spacer(modifier = Modifier.height(LcxSpacing.md))
 
-        LcxTextField(
+        PickupDateTimePicker(
             value = state.pickupEstimate,
-            onValueChange = onPickupEstimateChanged,
-            label = "Fecha promesa (AAAA-MM-DDTHH:MM)",
             enabled = !state.isSubmitting,
+            onValueChanged = onPickupEstimateChanged,
         )
         Spacer(modifier = Modifier.height(LcxSpacing.xs))
         Text(
@@ -723,6 +954,91 @@ private fun ServiceSection(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
+}
+
+@Composable
+private fun PickupDateTimePicker(
+    value: String,
+    enabled: Boolean,
+    onValueChanged: (String) -> Unit,
+) {
+    val context = LocalContext.current
+    val selectedDateTime = remember(value) {
+        parsePickupInput(value) ?: LocalDateTime.now()
+    }
+
+    LcxCard(title = "Fecha promesa") {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(LcxSpacing.xs),
+            ) {
+                Text(
+                    text = selectedDateTime.format(PickupDisplayFormatter),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                )
+                Text(
+                    text = "La seleccion se aplica inmediatamente al total y payload final.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            TextButton(
+                onClick = {
+                    showPickupPicker(
+                        context = context,
+                        initialValue = selectedDateTime,
+                        onValueChanged = onValueChanged,
+                    )
+                },
+                enabled = enabled,
+            ) {
+                Text("Cambiar")
+            }
+        }
+    }
+}
+
+private fun showPickupPicker(
+    context: android.content.Context,
+    initialValue: LocalDateTime,
+    onValueChanged: (String) -> Unit,
+) {
+    DatePickerDialog(
+        context,
+        { _, year, month, dayOfMonth ->
+            val selectedDate = LocalDateTime.of(
+                year,
+                month + 1,
+                dayOfMonth,
+                initialValue.hour,
+                initialValue.minute,
+            )
+
+            TimePickerDialog(
+                context,
+                { _, hourOfDay, minute ->
+                    val selectedDateTime = selectedDate
+                        .withHour(hourOfDay)
+                        .withMinute(minute)
+                        .withSecond(0)
+                        .withNano(0)
+                    onValueChanged(selectedDateTime.format(PickupInputFormatter))
+                },
+                initialValue.hour,
+                initialValue.minute,
+                true,
+            ).show()
+        },
+        initialValue.year,
+        initialValue.monthValue - 1,
+        initialValue.dayOfMonth,
+    ).show()
 }
 
 @Composable
@@ -983,7 +1299,59 @@ private fun PaymentSection(
 
 @Composable
 private fun SummarySection(state: CreateTicketUiState) {
+    val lineItems = remember(
+        state.selectedBaseServiceId,
+        state.weight,
+        state.services,
+        state.beddingQuantities,
+        state.extraItems,
+        state.selectedExtraIds,
+        state.inventoryItems,
+        state.inventoryQuantities,
+    ) {
+        buildSummaryLineItems(state)
+    }
+
     LcxCard(title = "Resumen") {
+        if (lineItems.isEmpty()) {
+            Text(
+                text = "El resumen se actualiza al seleccionar servicio, extras o productos.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.height(LcxSpacing.sm))
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(LcxSpacing.xs)) {
+                lineItems.forEach { item ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = item.label,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Text(
+                                text = item.detail,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Text(
+                            text = item.value,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(LcxSpacing.md))
+        }
         SummaryRow(label = "Subtotal", value = formatCurrency(state.pricing.subtotal))
         Spacer(modifier = Modifier.height(LcxSpacing.xs))
         SummaryRow(label = "Add-ons", value = formatCurrency(state.pricing.addOnsTotal))
@@ -1107,6 +1475,143 @@ private fun SummaryRow(
             },
             fontWeight = if (emphasize) FontWeight.SemiBold else FontWeight.Normal,
         )
+    }
+}
+
+private fun buildCatalogStatusText(state: CreateTicketUiState): String {
+    val loadedAt = state.catalogLoadedAtLabel ?: "recien cargado"
+    val branchLabel = state.inventoryItems
+        .mapNotNull { it.branch?.takeIf { branch -> branch.isNotBlank() } }
+        .distinct()
+        .takeIf { it.isNotEmpty() }
+        ?.joinToString(", ")
+        ?: "sucursal actual"
+
+    return "Actualizado $loadedAt · $branchLabel · ${state.services.size} servicios, " +
+        "${state.extraItems.size} extras, ${state.inventoryItems.size} productos vendibles"
+}
+
+private fun buildPriceLookupItems(
+    state: CreateTicketUiState,
+    query: String,
+): List<PriceLookupItem> {
+    val normalizedQuery = query.trim().lowercase()
+    if (normalizedQuery.isBlank()) return emptyList()
+
+    val serviceItems = state.services.map { service ->
+        PriceLookupItem(
+            title = service.name,
+            subtitle = listOf("Servicio", service.category, service.unit)
+                .filter { it.isNotBlank() }
+                .joinToString(" · "),
+            price = service.price,
+        )
+    }
+    val extraItems = state.extraItems.map { item ->
+        PriceLookupItem(
+            title = item.name,
+            subtitle = listOf("Extra", item.description.orEmpty())
+                .filter { it.isNotBlank() }
+                .joinToString(" · "),
+            price = item.price,
+        )
+    }
+    val inventoryItems = state.inventoryItems.map { item ->
+        PriceLookupItem(
+            title = item.itemName,
+            subtitle = listOfNotNull(
+                "Inventario",
+                item.sku?.takeIf { it.isNotBlank() }?.let { "SKU: $it" },
+                item.barcode?.takeIf { it.isNotBlank() }?.let { "Barcode: $it" },
+                "Stock: ${item.quantity} ${item.unit}",
+            ).joinToString(" · "),
+            price = item.price,
+        )
+    }
+
+    return (serviceItems + extraItems + inventoryItems)
+        .filter { item ->
+            listOf(item.title, item.subtitle)
+                .any { it.lowercase().contains(normalizedQuery) }
+        }
+        .take(8)
+}
+
+private fun buildSummaryLineItems(state: CreateTicketUiState): List<SummaryLineItem> {
+    val items = mutableListOf<SummaryLineItem>()
+    val baseService = state.services.firstOrNull { it.id == state.selectedBaseServiceId }
+    if (baseService != null) {
+        val chargedWeight = if (state.parsedWeightOrZero() > 0.0) {
+            state.parsedWeightOrZero().coerceAtLeast(3.0)
+        } else {
+            0.0
+        }
+        items += SummaryLineItem(
+            label = baseService.name,
+            detail = String.format(Locale.US, "%.2f kg x %s", chargedWeight, formatCurrency(baseService.price)),
+            value = formatCurrency(baseService.price * chargedWeight),
+        )
+    }
+
+    state.beddingQuantities
+        .filterValues { it > 0 }
+        .forEach { (id, quantity) ->
+            val item = state.beddingItems.firstOrNull { it.id == id } ?: return@forEach
+            items += SummaryLineItem(
+                label = item.name,
+                detail = "$quantity x ${formatCurrency(item.price)}",
+                value = formatCurrency(item.price * quantity),
+            )
+        }
+
+    state.selectedExtraIds.forEach { id ->
+        val item = state.extraItems.firstOrNull { it.id == id } ?: return@forEach
+        val isPercentage = isPercentageSurchargeLabel(item.name)
+        items += SummaryLineItem(
+            label = item.name,
+            detail = if (isPercentage) "Recargo 15%" else "1 x ${formatCurrency(item.price)}",
+            value = if (isPercentage) "15%" else formatCurrency(item.price),
+        )
+    }
+
+    state.inventoryQuantities
+        .filterValues { it > 0 }
+        .forEach { (id, quantity) ->
+            val item = state.inventoryItems.firstOrNull { it.id == id } ?: return@forEach
+            items += SummaryLineItem(
+                label = item.itemName,
+                detail = "$quantity x ${formatCurrency(item.price)}",
+                value = formatCurrency(item.price * quantity),
+            )
+        }
+
+    return items
+}
+
+private fun isPercentageSurchargeLabel(name: String): Boolean {
+    val normalizedName = name.lowercase()
+    return normalizedName.contains("fragancia premium") ||
+        normalizedName.contains("hipoalergénico") ||
+        normalizedName.contains("hipoalergenico") ||
+        normalizedName.contains("quitamanchas") ||
+        normalizedName.contains("tratamiento de manchas")
+}
+
+private fun parsePickupInput(value: String): LocalDateTime? {
+    return try {
+        LocalDateTime.parse(value, PickupInputFormatter)
+    } catch (_: DateTimeParseException) {
+        null
+    }
+}
+
+private fun firstBlockingStep(state: CreateTicketUiState): CreateTicketStep? {
+    return when {
+        !state.hasSelectedCustomer() -> CreateTicketStep.CUSTOMER
+        state.selectedBaseServiceId == null ||
+            state.parsedWeightOrZero() <= 0.0 ||
+            parsePickupInput(state.pickupEstimate) == null -> CreateTicketStep.SERVICE
+        else -> null
     }
 }
 

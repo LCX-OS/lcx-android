@@ -61,10 +61,12 @@ class CreateTicketReducerTest {
                     inventoryItems = emptyList(),
                     defaultBaseServiceId = baseService.id,
                 ),
+                loadedAtLabel = "10:30",
             ),
         )
 
         assertFalse(result.isLoadingCatalogs)
+        assertEquals("10:30", result.catalogLoadedAtLabel)
         assertEquals(baseService.id, result.selectedBaseServiceId)
         assertEquals(mapOf("service-bedding" to 1), result.beddingQuantities)
         assertEquals(listOf("addon-softener"), result.selectedExtraIds)

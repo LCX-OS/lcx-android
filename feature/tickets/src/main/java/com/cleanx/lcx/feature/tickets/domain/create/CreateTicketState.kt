@@ -40,6 +40,7 @@ data class CustomerPickerUiState(
 data class CreateTicketUiState(
     val isLoadingCatalogs: Boolean = true,
     val catalogError: String? = null,
+    val catalogLoadedAtLabel: String? = null,
     val services: List<ServiceCatalogRecord> = emptyList(),
     val beddingItems: List<ServiceCatalogRecord> = emptyList(),
     val extraItems: List<AddOnCatalogRecord> = emptyList(),

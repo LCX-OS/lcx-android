@@ -16,7 +16,10 @@ import javax.inject.Inject
 
 sealed interface CreateTicketMutation {
     data object CatalogLoadingStarted : CreateTicketMutation
-    data class CatalogsLoaded(val snapshot: EncargoCatalogSnapshot) : CreateTicketMutation
+    data class CatalogsLoaded(
+        val snapshot: EncargoCatalogSnapshot,
+        val loadedAtLabel: String,
+    ) : CreateTicketMutation
     data class CatalogLoadFailed(val message: String) : CreateTicketMutation
     data class CustomerSearchQueryChanged(val value: String) : CreateTicketMutation
     data class CustomerSearchResolved(
@@ -96,6 +99,7 @@ class CreateTicketReducer @Inject constructor() {
                 current.copy(
                     isLoadingCatalogs = false,
                     catalogError = null,
+                    catalogLoadedAtLabel = mutation.loadedAtLabel,
                     services = snapshot.services,
                     beddingItems = snapshot.beddingItems,
                     extraItems = snapshot.extraItems,

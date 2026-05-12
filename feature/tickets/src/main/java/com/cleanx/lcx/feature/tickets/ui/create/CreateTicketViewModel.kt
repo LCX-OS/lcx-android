@@ -27,9 +27,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 private const val CUSTOMER_SEARCH_DEBOUNCE_MS = 350L
+private val CatalogLoadedFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
 @HiltViewModel
 class CreateTicketViewModel @Inject constructor(
@@ -245,7 +248,12 @@ class CreateTicketViewModel @Inject constructor(
 
             when (val result = loadEncargoCatalogsUseCase()) {
                 is LoadEncargoCatalogsResult.Success -> {
-                    mutate(CreateTicketMutation.CatalogsLoaded(result.snapshot))
+                    mutate(
+                        CreateTicketMutation.CatalogsLoaded(
+                            snapshot = result.snapshot,
+                            loadedAtLabel = LocalDateTime.now().format(CatalogLoadedFormatter),
+                        ),
+                    )
                 }
 
                 is LoadEncargoCatalogsResult.Failure -> {
