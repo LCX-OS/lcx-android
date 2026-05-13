@@ -66,6 +66,7 @@ class ZettlePaymentManagerTest {
     ): BuildConfigProvider = object : BuildConfigProvider {
         override val applicationId: String = applicationId
         override val apiBaseUrl: String = "http://localhost"
+        override val platformBaseUrl: String = "http://localhost"
         override val notificationsBaseUrl: String = "http://localhost"
         override val supabaseUrl: String = "http://localhost"
         override val supabaseAnonKey: String = "anon"
