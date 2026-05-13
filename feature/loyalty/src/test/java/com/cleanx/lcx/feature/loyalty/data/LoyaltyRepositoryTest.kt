@@ -3,12 +3,9 @@ package com.cleanx.lcx.feature.loyalty.data
 import com.cleanx.lcx.core.network.CreateLoyaltyAccountRequest
 import com.cleanx.lcx.core.network.LoyaltyAccountDto
 import com.cleanx.lcx.core.network.LoyaltyApi
-import com.cleanx.lcx.core.network.LoyaltyCreateAccountData
 import com.cleanx.lcx.core.network.LoyaltyCreateAccountResponse
 import com.cleanx.lcx.core.network.LoyaltyPointsUpdateData
 import com.cleanx.lcx.core.network.LoyaltyPointsUpdateResponse
-import com.cleanx.lcx.core.network.LoyaltyEventDto
-import com.cleanx.lcx.core.network.WalletLinksDto
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -39,6 +36,8 @@ class LoyaltyRepositoryTest {
         walletAppleSerial = null,
         walletGoogleObjectId = null,
         chainWalletAddress = null,
+        addToAppleWalletUrl = "https://example.com/apple/acc_1",
+        addToGoogleWalletUrl = "https://example.com/google/acc_1",
         createdAt = "2026-03-06T10:00:00Z",
         updatedAt = "2026-03-06T10:00:00Z",
     )
@@ -53,13 +52,7 @@ class LoyaltyRepositoryTest {
     fun `createAccount success returns account data`() = runTest {
         coEvery { api.createAccount(any()) } returns Response.success(
             LoyaltyCreateAccountResponse(
-                data = LoyaltyCreateAccountData(
-                    account = sampleAccount,
-                    wallet = WalletLinksDto(
-                        addToAppleWalletUrl = "https://example.com/apple/acc_1",
-                        addToGoogleWalletUrl = "https://example.com/google/acc_1",
-                    ),
-                ),
+                data = sampleAccount,
             ),
         )
 
@@ -76,13 +69,7 @@ class LoyaltyRepositoryTest {
         val requestSlot = slot<CreateLoyaltyAccountRequest>()
         coEvery { api.createAccount(capture(requestSlot)) } returns Response.success(
             LoyaltyCreateAccountResponse(
-                data = LoyaltyCreateAccountData(
-                    account = sampleAccount,
-                    wallet = WalletLinksDto(
-                        addToAppleWalletUrl = "https://example.com/apple/acc_1",
-                        addToGoogleWalletUrl = "https://example.com/google/acc_1",
-                    ),
-                ),
+                data = sampleAccount,
             ),
         )
 
@@ -95,7 +82,7 @@ class LoyaltyRepositoryTest {
         val captured = requestSlot.captured
         assertEquals("Maria Lopez", captured.displayName)
         assertEquals("customer_2", captured.customerId)
-        assertEquals("0xabc", captured.chainWalletAddress)
+        assertEquals(null, captured.loyaltyId)
     }
 
     @Test
@@ -103,17 +90,11 @@ class LoyaltyRepositoryTest {
         coEvery { api.earn(any()) } returns Response.success(
             LoyaltyPointsUpdateResponse(
                 data = LoyaltyPointsUpdateData(
-                    account = sampleAccount.copy(pointsBalance = 7),
-                    event = LoyaltyEventDto(
-                        id = "evt_1",
-                        accountId = "acc_1",
-                        eventType = "earn",
-                        sourceType = "washer_cycle",
-                        sourceRefId = "pos-001",
-                        pointsDelta = 2,
-                        chainTxHash = "0x123",
-                        createdAt = "2026-03-06T10:01:00Z",
-                    ),
+                    eventId = "evt_1",
+                    accountId = "acc_1",
+                    pointsDelta = 2,
+                    newPointsBalance = 7,
+                    idempotent = false,
                 ),
             ),
         )
@@ -127,8 +108,8 @@ class LoyaltyRepositoryTest {
 
         assertTrue(result is LoyaltyApiResult.Success)
         val data = (result as LoyaltyApiResult.Success).data
-        assertEquals(7, data.account.pointsBalance)
-        assertEquals("washer_cycle", data.event.sourceType)
+        assertEquals(7, data.newPointsBalance)
+        assertEquals(2, data.pointsDelta)
         coVerify(exactly = 1) { api.earn(match { it.sourceType == "washer_cycle" }) }
     }
 
@@ -141,8 +122,8 @@ class LoyaltyRepositoryTest {
 
         val result = repository.redeemPoints(
             accountId = "acc_1",
+            rewardId = "reward_1",
             sourceRefId = "redeem-001",
-            points = 10,
         )
 
         assertTrue(result is LoyaltyApiResult.Error)

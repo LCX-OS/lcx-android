@@ -18,6 +18,7 @@ object AppConfigModule {
     fun provideBuildConfigProvider(): BuildConfigProvider = object : BuildConfigProvider {
         override val applicationId: String = BuildConfig.APPLICATION_ID
         override val apiBaseUrl: String = BuildConfig.API_BASE_URL
+        override val platformBaseUrl: String = BuildConfig.PLATFORM_BASE_URL
         override val notificationsBaseUrl: String = BuildConfig.NOTIFICATIONS_BASE_URL
         override val supabaseUrl: String = BuildConfig.SUPABASE_URL
         override val supabaseAnonKey: String = BuildConfig.SUPABASE_ANON_KEY

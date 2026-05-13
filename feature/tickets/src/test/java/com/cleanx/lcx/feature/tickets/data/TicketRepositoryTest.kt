@@ -10,7 +10,6 @@ import com.cleanx.lcx.core.network.SessionExpiredInterceptor
 import com.cleanx.lcx.core.network.SmsNotificationClient
 import com.cleanx.lcx.core.network.SmsNotificationResult
 import com.cleanx.lcx.core.network.SmsSendResponseData
-import com.cleanx.lcx.core.network.SupabaseTableClient
 import com.cleanx.lcx.core.network.TicketApi
 import com.cleanx.lcx.core.network.TicketDraft
 import com.cleanx.lcx.core.network.TicketResponse
@@ -26,7 +25,6 @@ import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -36,7 +34,6 @@ class TicketRepositoryTest {
 
     private lateinit var api: TicketApi
     private lateinit var smsNotificationClient: SmsNotificationClient
-    private lateinit var supabase: SupabaseTableClient
     private lateinit var repository: TicketRepository
     private val json = Json { ignoreUnknownKeys = true; coerceInputValues = true }
 
@@ -60,7 +57,6 @@ class TicketRepositoryTest {
     fun setUp() {
         api = mockk()
         smsNotificationClient = mockk()
-        supabase = mockk(relaxed = true)
         coEvery {
             smsNotificationClient.sendTicketReadyPickup(any(), any(), any(), any())
         } returns SmsNotificationResult.Success(
@@ -87,7 +83,59 @@ class TicketRepositoryTest {
                 idempotent = false,
             ),
         )
-        repository = TicketRepository(api, json, smsNotificationClient, supabase)
+        repository = TicketRepository(api, json, smsNotificationClient)
+    }
+
+    // ---- reads ----
+
+    @Test
+    fun `getTickets success returns list from API`() = runTest {
+        coEvery { api.getTickets(100) } returns Response.success(
+            TicketsResponse(data = listOf(sampleTicket)),
+        )
+
+        val result = repository.getTickets()
+
+        assertTrue(result is ApiResult.Success)
+        val tickets = (result as ApiResult.Success).data
+        assertEquals(1, tickets.size)
+        assertEquals("abc-123", tickets[0].id)
+    }
+
+    @Test
+    fun `getTickets passes requested limit to API`() = runTest {
+        val limitSlot = slot<Long>()
+        coEvery { api.getTickets(capture(limitSlot)) } returns Response.success(
+            TicketsResponse(data = emptyList()),
+        )
+
+        repository.getTickets(limit = 200)
+
+        assertEquals(200L, limitSlot.captured)
+    }
+
+    @Test
+    fun `getTicket success returns ticket from API`() = runTest {
+        coEvery { api.getTicket("abc-123") } returns Response.success(
+            TicketResponse(data = sampleTicket),
+        )
+
+        val result = repository.getTicket("abc-123")
+
+        assertTrue(result is ApiResult.Success)
+        assertEquals("abc-123", (result as ApiResult.Success).data?.id)
+    }
+
+    @Test
+    fun `getTicket maps 404 to null success for existing UI behavior`() = runTest {
+        val errorJson = """{"error":"Ticket no encontrado.","code":"NOT_FOUND"}"""
+        val errorBody = errorJson.toResponseBody("application/json".toMediaType())
+        coEvery { api.getTicket("missing") } returns Response.error(404, errorBody)
+
+        val result = repository.getTicket("missing")
+
+        assertTrue(result is ApiResult.Success)
+        assertEquals(null, (result as ApiResult.Success).data)
     }
 
     // ---- createTickets ----

@@ -7,7 +7,9 @@ import com.cleanx.lcx.core.network.LoyaltyAccountDetailData
 import com.cleanx.lcx.core.network.LoyaltyApi
 import com.cleanx.lcx.core.network.LoyaltyCreateAccountData
 import com.cleanx.lcx.core.network.LoyaltyPointsUpdateData
+import com.cleanx.lcx.core.network.LoyaltyRewardsData
 import com.cleanx.lcx.core.network.RedeemLoyaltyPointsRequest
+import com.cleanx.lcx.core.network.WalletLinksDto
 import com.cleanx.lcx.core.network.WalletIssueData
 import com.cleanx.lcx.core.network.WalletIssueRequest
 import com.cleanx.lcx.core.network.WalletResyncData
@@ -24,6 +26,7 @@ enum class LoyaltySourceType {
     WASHER_CYCLE,
     KG,
     MANUAL,
+    TICKET_PAID,
     ;
 
     fun toWireValue(): String = when (this) {
@@ -31,6 +34,7 @@ enum class LoyaltySourceType {
         WASHER_CYCLE -> "washer_cycle"
         KG -> "kg"
         MANUAL -> "manual"
+        TICKET_PAID -> "ticket_paid"
     }
 }
 
@@ -61,13 +65,20 @@ class LoyaltyRepository @Inject constructor(
                 request = CreateLoyaltyAccountRequest(
                     displayName = displayName,
                     customerId = customerId,
-                    chainWalletAddress = chainWalletAddress,
                 ),
             )
             if (response.isSuccessful) {
-                val data = response.body()?.data
-                if (data != null) {
-                    LoyaltyApiResult.Success(data)
+                val account = response.body()?.data
+                if (account != null) {
+                    LoyaltyApiResult.Success(
+                        LoyaltyCreateAccountData(
+                            account = account,
+                            wallet = WalletLinksDto(
+                                addToAppleWalletUrl = account.addToAppleWalletUrl,
+                                addToGoogleWalletUrl = account.addToGoogleWalletUrl,
+                            ),
+                        ),
+                    )
                 } else {
                     LoyaltyApiResult.Error(
                         message = "Respuesta vacia del servidor.",
@@ -162,26 +173,25 @@ class LoyaltyRepository @Inject constructor(
     }
 
     suspend fun redeemPoints(
-        points: Int,
+        rewardId: String,
         sourceRefId: String,
-        accountId: String? = null,
-        loyaltyId: String? = null,
+        accountId: String,
+        branchId: String? = null,
     ): LoyaltyApiResult<LoyaltyPointsUpdateData> {
         Timber.tag("LOYALTY").d(
-            "Redeeming loyalty points accountId=%s loyaltyId=%s sourceRefId=%s points=%d",
+            "Redeeming loyalty reward accountId=%s rewardId=%s sourceRefId=%s",
             accountId,
-            loyaltyId,
+            rewardId,
             sourceRefId,
-            points,
         )
 
         return try {
             val response = api.redeem(
                 request = RedeemLoyaltyPointsRequest(
                     accountId = accountId,
-                    loyaltyId = loyaltyId,
+                    rewardId = rewardId,
                     sourceRefId = sourceRefId,
-                    points = points,
+                    branchId = branchId,
                 ),
             )
             if (response.isSuccessful) {
@@ -240,6 +250,30 @@ class LoyaltyRepository @Inject constructor(
             val response = api.resyncWallet(
                 request = WalletResyncRequest(accountId = accountId),
             )
+            if (response.isSuccessful) {
+                val data = response.body()?.data
+                if (data != null) {
+                    LoyaltyApiResult.Success(data)
+                } else {
+                    LoyaltyApiResult.Error(
+                        message = "Respuesta vacia del servidor.",
+                        httpStatus = response.code(),
+                    )
+                }
+            } else {
+                response.parseError()
+            }
+        } catch (e: Exception) {
+            LoyaltyApiResult.Error(
+                message = e.message ?: "Error de conexion.",
+                httpStatus = 0,
+            )
+        }
+    }
+
+    suspend fun getRewards(): LoyaltyApiResult<LoyaltyRewardsData> {
+        return try {
+            val response = api.getRewards()
             if (response.isSuccessful) {
                 val data = response.body()?.data
                 if (data != null) {

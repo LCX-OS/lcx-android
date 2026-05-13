@@ -19,7 +19,12 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
+import javax.inject.Qualifier
 import javax.inject.Singleton
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class PlatformRetrofit
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -76,13 +81,24 @@ object NetworkModule {
 
     @Provides
     @Singleton
+    @PlatformRetrofit
+    fun providePlatformRetrofit(client: OkHttpClient, json: Json, config: BuildConfigProvider): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl(config.platformBaseUrl + "/")
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+    }
+
+    @Provides
+    @Singleton
     fun provideTicketApi(retrofit: Retrofit): TicketApi {
         return retrofit.create(TicketApi::class.java)
     }
 
     @Provides
     @Singleton
-    fun provideLoyaltyApi(retrofit: Retrofit): LoyaltyApi {
+    fun provideLoyaltyApi(@PlatformRetrofit retrofit: Retrofit): LoyaltyApi {
         return retrofit.create(LoyaltyApi::class.java)
     }
 

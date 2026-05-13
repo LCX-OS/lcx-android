@@ -9,13 +9,10 @@ import com.cleanx.lcx.core.network.CreateTicketsRequest
 import com.cleanx.lcx.core.network.SessionExpiredInterceptor
 import com.cleanx.lcx.core.network.SmsNotificationClient
 import com.cleanx.lcx.core.network.SmsNotificationResult
-import com.cleanx.lcx.core.network.SupabaseError
-import com.cleanx.lcx.core.network.SupabaseTableClient
 import com.cleanx.lcx.core.network.TicketApi
 import com.cleanx.lcx.core.network.TicketDraft
 import com.cleanx.lcx.core.network.UpdatePaymentRequest
 import com.cleanx.lcx.core.network.UpdateStatusRequest
-import io.github.jan.supabase.postgrest.query.Order
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import retrofit2.Response
@@ -38,34 +35,47 @@ class TicketRepository @Inject constructor(
     private val api: TicketApi,
     private val json: Json,
     private val smsNotificationClient: SmsNotificationClient,
-    private val supabase: SupabaseTableClient,
 ) {
 
     suspend fun getTickets(limit: Long = 100): ApiResult<List<Ticket>> {
         Timber.tag("TICKET").d("Loading tickets limit=%d", limit)
 
-        return supabase.selectWithRequest<Ticket>("tickets") {
-            order("created_at", Order.DESCENDING)
-            limit(limit)
-        }.fold(
-            onSuccess = { tickets -> ApiResult.Success(tickets) },
-            onFailure = { error ->
-                error.toApiError(defaultMessage = "No se pudieron cargar los encargos.")
-            },
-        )
+        return try {
+            val response = api.getTickets(limit = limit)
+            if (response.isSuccessful) {
+                ApiResult.Success(response.body()?.data ?: emptyList())
+            } else {
+                response.parseError()
+            }
+        } catch (e: Exception) {
+            ApiResult.Error(
+                message = e.message ?: "Error de conexion.",
+                httpStatus = 0,
+            )
+        }
     }
 
     suspend fun getTicket(ticketId: String): ApiResult<Ticket?> {
         Timber.tag("TICKET").d("Loading ticket %s", ticketId)
 
-        return supabase.selectSingle<Ticket>("tickets") {
-            eq("id", ticketId)
-        }.fold(
-            onSuccess = { ticket -> ApiResult.Success(ticket) },
-            onFailure = { error ->
-                error.toApiError(defaultMessage = "No se pudo cargar el encargo.")
-            },
-        )
+        return try {
+            val response = api.getTicket(id = ticketId)
+            if (response.isSuccessful) {
+                ApiResult.Success(response.body()?.data)
+            } else {
+                val error = response.parseError()
+                if (error.code == "NOT_FOUND" || response.code() == 404) {
+                    ApiResult.Success(null)
+                } else {
+                    error
+                }
+            }
+        } catch (e: Exception) {
+            ApiResult.Error(
+                message = e.message ?: "Error de conexion.",
+                httpStatus = 0,
+            )
+        }
     }
 
     suspend fun createTickets(
@@ -260,44 +270,6 @@ class TicketRepository @Inject constructor(
             code = apiError?.code,
             details = apiError?.details,
         )
-    }
-
-    private fun Throwable.toApiError(defaultMessage: String): ApiResult.Error {
-        return when (this) {
-            is SupabaseError.Unauthorized -> ApiResult.Error(
-                code = "NOT_AUTHENTICATED",
-                message = message,
-                httpStatus = 401,
-            )
-
-            is SupabaseError.NotFound -> ApiResult.Error(
-                code = "NOT_FOUND",
-                message = message,
-                httpStatus = 404,
-            )
-
-            is SupabaseError.BadRequest -> ApiResult.Error(
-                code = "BAD_REQUEST",
-                message = message,
-                httpStatus = statusCode ?: 400,
-            )
-
-            is SupabaseError.ServerError -> ApiResult.Error(
-                code = "INTERNAL_SERVER_ERROR",
-                message = message,
-                httpStatus = statusCode ?: 500,
-            )
-
-            is SupabaseError.NetworkError -> ApiResult.Error(
-                message = message,
-                httpStatus = 0,
-            )
-
-            else -> ApiResult.Error(
-                message = message ?: defaultMessage,
-                httpStatus = 0,
-            )
-        }
     }
 
     private suspend fun maybeSendReadySms(ticket: Ticket) {

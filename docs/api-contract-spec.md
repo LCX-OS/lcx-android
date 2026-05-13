@@ -15,6 +15,8 @@
 4. [Data Models](#data-models)
 5. [Enumerations](#enumerations)
 6. [Ticket Endpoints](#ticket-endpoints)
+   - [GET /api/tickets](#get-apitickets)
+   - [GET /api/tickets/:id](#get-apiticketsid)
    - [POST /api/tickets](#post-apiticktes)
    - [GET /api/ticket-support/catalogs](#get-apiticket-supportcatalogs)
    - [GET /api/ticket-support/customers](#get-apiticket-supportcustomers)
@@ -214,6 +216,71 @@ enum class UserRole {
 ---
 
 ## Ticket Endpoints
+
+### GET /api/tickets
+
+List tickets for Android ticket list/dashboard reads.
+
+**Authentication:** Required (Bearer token or session cookie)
+
+**Query Parameters**
+
+| Parameter | Rules |
+|-----------|-------|
+| `limit` | Optional, clamped to `1..500`; defaults to 100 |
+
+**Successful Response (HTTP 200)**
+
+```json
+{
+  "data": []
+}
+```
+
+Results are ordered by `created_at` descending.
+
+---
+
+### GET /api/tickets/:id
+
+Read one ticket by ID for Android ticket detail.
+
+**Authentication:** Required (Bearer token or session cookie)
+
+**Successful Response (HTTP 200)**
+
+```json
+{
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "ticket_number": "T-20260302-0001",
+    "ticket_date": "2026-03-02",
+    "daily_folio": 1,
+    "source": "encargo",
+    "customer_id": null,
+    "customer_name": "Juan García",
+    "customer_phone": "+56912345678",
+    "service_type": "wash-fold",
+    "service": "Lavado y Planchado",
+    "status": "received",
+    "payment_status": "pending",
+    "paid_amount": 0
+  }
+}
+```
+
+**Not Found Response (HTTP 404)**
+
+```json
+{
+  "error": "Ticket no encontrado.",
+  "code": "NOT_FOUND"
+}
+```
+
+Android maps this `404` to the existing nullable detail behavior.
+
+---
 
 ### POST /api/tickets
 

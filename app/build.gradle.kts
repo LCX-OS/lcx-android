@@ -87,6 +87,7 @@ data class ReleaseSigningConfig(
 data class FlavorEnvironmentConfig(
     val flavorName: String,
     val apiBaseUrl: String,
+    val platformBaseUrl: String,
     val notificationsBaseUrl: String,
     val supabaseUrl: String,
     val supabaseAnonKey: String,
@@ -171,6 +172,11 @@ val devNotificationsBaseUrl = readConfig(
     envName = "LCX_DEV_NOTIFICATIONS_BASE_URL",
     defaultValue = "http://10.0.2.2:8080",
 )
+val devPlatformBaseUrl = readConfig(
+    propertyName = "LCX_DEV_PLATFORM_BASE_URL",
+    envName = "LCX_DEV_PLATFORM_BASE_URL",
+    defaultValue = "http://10.0.2.2:8080",
+)
 val devSupabaseUrl = readConfig(
     propertyName = "LCX_DEV_SUPABASE_URL",
     envName = "LCX_DEV_SUPABASE_URL",
@@ -215,6 +221,11 @@ val prodNotificationsBaseUrl = readConfig(
     envName = "LCX_PROD_NOTIFICATIONS_BASE_URL",
     defaultValue = prodApiBaseUrl,
 )
+val prodPlatformBaseUrl = readConfig(
+    propertyName = "LCX_PROD_PLATFORM_BASE_URL",
+    envName = "LCX_PROD_PLATFORM_BASE_URL",
+    defaultValue = prodNotificationsBaseUrl,
+)
 val prodSupabaseUrl = readConfig(
     propertyName = "LCX_PROD_SUPABASE_URL",
     envName = "LCX_PROD_SUPABASE_URL",
@@ -255,6 +266,7 @@ val docsReleasePath = rootProject.file("docs/android-release.md").absolutePath
 val prodEnvironmentConfig = FlavorEnvironmentConfig(
     flavorName = "prod",
     apiBaseUrl = prodApiBaseUrl,
+    platformBaseUrl = prodPlatformBaseUrl,
     notificationsBaseUrl = prodNotificationsBaseUrl,
     supabaseUrl = prodSupabaseUrl,
     supabaseAnonKey = prodSupabaseAnonKey,
@@ -272,6 +284,7 @@ fun buildEnvironmentValidationError(config: FlavorEnvironmentConfig): String? {
     val propertyPrefix = "LCX_${config.flavorName.uppercase()}"
     val invalidProperties = buildList {
         if (config.apiBaseUrl.isPlaceholderConfigValue()) add("${propertyPrefix}_API_BASE_URL")
+        if (config.platformBaseUrl.isPlaceholderConfigValue()) add("${propertyPrefix}_PLATFORM_BASE_URL")
         if (config.notificationsBaseUrl.isPlaceholderConfigValue()) add("${propertyPrefix}_NOTIFICATIONS_BASE_URL")
         if (config.supabaseUrl.isPlaceholderConfigValue()) add("${propertyPrefix}_SUPABASE_URL")
         if (config.supabaseAnonKey.isPlaceholderConfigValue()) add("${propertyPrefix}_SUPABASE_ANON_KEY")
@@ -342,6 +355,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:3000\"")
+        buildConfigField("String", "PLATFORM_BASE_URL", "\"http://10.0.2.2:8080\"")
         buildConfigField("String", "NOTIFICATIONS_BASE_URL", "\"http://10.0.2.2:8080\"")
         buildConfigField("String", "SUPABASE_URL", "\"https://placeholder.supabase.co\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"placeholder-anon-key\"")
@@ -365,6 +379,7 @@ android {
             applicationIdSuffix = devApplicationIdSuffix
             versionNameSuffix = "-dev"
             buildConfigField("String", "API_BASE_URL", devApiBaseUrl.toBuildConfigString())
+            buildConfigField("String", "PLATFORM_BASE_URL", devPlatformBaseUrl.toBuildConfigString())
             buildConfigField("String", "NOTIFICATIONS_BASE_URL", devNotificationsBaseUrl.toBuildConfigString())
             buildConfigField("String", "SUPABASE_URL", devSupabaseUrl.toBuildConfigString())
             buildConfigField("String", "SUPABASE_ANON_KEY", devSupabaseAnonKey.toBuildConfigString())
@@ -376,6 +391,7 @@ android {
         create("prod") {
             dimension = "environment"
             buildConfigField("String", "API_BASE_URL", prodApiBaseUrl.toBuildConfigString())
+            buildConfigField("String", "PLATFORM_BASE_URL", prodPlatformBaseUrl.toBuildConfigString())
             buildConfigField("String", "NOTIFICATIONS_BASE_URL", prodNotificationsBaseUrl.toBuildConfigString())
             buildConfigField("String", "SUPABASE_URL", prodSupabaseUrl.toBuildConfigString())
             buildConfigField("String", "SUPABASE_ANON_KEY", prodSupabaseAnonKey.toBuildConfigString())

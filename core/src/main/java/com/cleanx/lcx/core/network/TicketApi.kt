@@ -5,10 +5,12 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Path
+import retrofit2.http.Query
 
 @Serializable
 data class CreateTicketsRequest(
@@ -66,6 +68,16 @@ data class ApiError(
 )
 
 interface TicketApi {
+    @GET("api/tickets")
+    suspend fun getTickets(
+        @Query("limit") limit: Long,
+    ): Response<TicketsResponse>
+
+    @GET("api/tickets/{id}")
+    suspend fun getTicket(
+        @Path("id") id: String,
+    ): Response<TicketResponse>
+
     @POST("api/tickets")
     suspend fun createTickets(
         @Body request: CreateTicketsRequest,

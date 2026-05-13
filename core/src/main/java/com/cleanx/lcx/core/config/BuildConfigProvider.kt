@@ -9,6 +9,7 @@ package com.cleanx.lcx.core.config
 interface BuildConfigProvider {
     val applicationId: String
     val apiBaseUrl: String
+    val platformBaseUrl: String
     val notificationsBaseUrl: String
     val supabaseUrl: String
     val supabaseAnonKey: String

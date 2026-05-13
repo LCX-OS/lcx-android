@@ -7,12 +7,13 @@ import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
+import retrofit2.http.Query
 
 @Serializable
 data class CreateLoyaltyAccountRequest(
     @SerialName("display_name") val displayName: String,
     @SerialName("customer_id") val customerId: String? = null,
-    @SerialName("chain_wallet_address") val chainWalletAddress: String? = null,
+    @SerialName("loyalty_id") val loyaltyId: String? = null,
 )
 
 @Serializable
@@ -28,10 +29,10 @@ data class EarnLoyaltyPointsRequest(
 
 @Serializable
 data class RedeemLoyaltyPointsRequest(
-    @SerialName("account_id") val accountId: String? = null,
-    @SerialName("loyalty_id") val loyaltyId: String? = null,
+    @SerialName("account_id") val accountId: String,
+    @SerialName("reward_id") val rewardId: String,
     @SerialName("source_ref_id") val sourceRefId: String,
-    val points: Int,
+    @SerialName("branch_id") val branchId: String? = null,
 )
 
 @Serializable
@@ -42,6 +43,7 @@ data class WalletIssueRequest(
 @Serializable
 data class WalletResyncRequest(
     @SerialName("account_id") val accountId: String,
+    val provider: String? = null,
 )
 
 @Serializable
@@ -49,12 +51,14 @@ data class LoyaltyAccountDto(
     val id: String,
     @SerialName("loyalty_id") val loyaltyId: String,
     @SerialName("customer_id") val customerId: String? = null,
-    @SerialName("display_name") val displayName: String,
+    @SerialName("display_name") val displayName: String? = null,
     @SerialName("points_balance") val pointsBalance: Int,
     val status: String,
     @SerialName("wallet_apple_serial") val walletAppleSerial: String? = null,
     @SerialName("wallet_google_object_id") val walletGoogleObjectId: String? = null,
     @SerialName("chain_wallet_address") val chainWalletAddress: String? = null,
+    @SerialName("add_to_apple_wallet_url") val addToAppleWalletUrl: String,
+    @SerialName("add_to_google_wallet_url") val addToGoogleWalletUrl: String,
     @SerialName("created_at") val createdAt: String,
     @SerialName("updated_at") val updatedAt: String,
 )
@@ -67,6 +71,10 @@ data class LoyaltyEventDto(
     @SerialName("source_type") val sourceType: String,
     @SerialName("source_ref_id") val sourceRefId: String,
     @SerialName("points_delta") val pointsDelta: Int,
+    @SerialName("ticket_id") val ticketId: String? = null,
+    @SerialName("branch_id") val branchId: String? = null,
+    @SerialName("reward_id") val rewardId: String? = null,
+    @SerialName("requested_by") val requestedBy: String? = null,
     @SerialName("chain_tx_hash") val chainTxHash: String? = null,
     @SerialName("created_at") val createdAt: String,
 )
@@ -84,6 +92,11 @@ data class LoyaltyCreateAccountData(
 )
 
 @Serializable
+data class LoyaltyAccountsListData(
+    val accounts: List<LoyaltyAccountDto>,
+)
+
+@Serializable
 data class LoyaltyAccountDetailData(
     val account: LoyaltyAccountDto,
     @SerialName("recent_events") val recentEvents: List<LoyaltyEventDto>,
@@ -91,8 +104,28 @@ data class LoyaltyAccountDetailData(
 
 @Serializable
 data class LoyaltyPointsUpdateData(
-    val account: LoyaltyAccountDto,
-    val event: LoyaltyEventDto,
+    @SerialName("event_id") val eventId: String,
+    @SerialName("account_id") val accountId: String,
+    @SerialName("points_delta") val pointsDelta: Int,
+    @SerialName("new_points_balance") val newPointsBalance: Int,
+    val idempotent: Boolean,
+)
+
+@Serializable
+data class LoyaltyRewardDto(
+    val id: String,
+    val name: String,
+    val description: String? = null,
+    @SerialName("points_cost") val pointsCost: Int,
+    val active: Boolean,
+    @SerialName("sort_order") val sortOrder: Int,
+    @SerialName("created_at") val createdAt: String,
+    @SerialName("updated_at") val updatedAt: String,
+)
+
+@Serializable
+data class LoyaltyRewardsData(
+    val rewards: List<LoyaltyRewardDto>,
 )
 
 @Serializable
@@ -106,11 +139,38 @@ data class WalletIssueData(
 data class WalletResyncData(
     @SerialName("account_id") val accountId: String,
     val status: String,
+    val jobs: List<WalletSyncJobDto> = emptyList(),
+)
+
+@Serializable
+data class WalletSyncJobDto(
+    val id: String,
+    val provider: String,
+    val operation: String,
+    val status: String,
+)
+
+@Serializable
+data class LoyaltyAccountResponse(
+    val data: LoyaltyAccountDto? = null,
+    val error: String? = null,
+    val code: String? = null,
+    val details: String? = null,
+    @SerialName("correlation_id") val correlationId: String? = null,
+)
+
+@Serializable
+data class LoyaltyAccountsListResponse(
+    val data: LoyaltyAccountsListData? = null,
+    val error: String? = null,
+    val code: String? = null,
+    val details: String? = null,
+    @SerialName("correlation_id") val correlationId: String? = null,
 )
 
 @Serializable
 data class LoyaltyCreateAccountResponse(
-    val data: LoyaltyCreateAccountData? = null,
+    val data: LoyaltyAccountDto? = null,
     val error: String? = null,
     val code: String? = null,
     val details: String? = null,
@@ -136,6 +196,15 @@ data class LoyaltyPointsUpdateResponse(
 )
 
 @Serializable
+data class LoyaltyRewardsResponse(
+    val data: LoyaltyRewardsData? = null,
+    val error: String? = null,
+    val code: String? = null,
+    val details: String? = null,
+    @SerialName("correlation_id") val correlationId: String? = null,
+)
+
+@Serializable
 data class WalletIssueResponse(
     val data: WalletIssueData? = null,
     val error: String? = null,
@@ -154,33 +223,43 @@ data class WalletResyncResponse(
 )
 
 interface LoyaltyApi {
-    @POST("api/loyalty/accounts")
+    @GET("v1/loyalty/accounts")
+    suspend fun listAccounts(
+        @Query("query") query: String? = null,
+        @Query("customer_id") customerId: String? = null,
+        @Query("limit") limit: Int? = null,
+    ): Response<LoyaltyAccountsListResponse>
+
+    @POST("v1/loyalty/accounts")
     suspend fun createAccount(
         @Body request: CreateLoyaltyAccountRequest,
     ): Response<LoyaltyCreateAccountResponse>
 
-    @GET("api/loyalty/accounts/{id}")
+    @GET("v1/loyalty/accounts/{id}")
     suspend fun getAccount(
         @Path("id") accountId: String,
     ): Response<LoyaltyAccountDetailResponse>
 
-    @POST("api/loyalty/events/earn")
+    @POST("v1/loyalty/events/earn")
     suspend fun earn(
         @Body request: EarnLoyaltyPointsRequest,
     ): Response<LoyaltyPointsUpdateResponse>
 
-    @POST("api/loyalty/events/redeem")
+    @POST("v1/loyalty/events/redeem")
     suspend fun redeem(
         @Body request: RedeemLoyaltyPointsRequest,
     ): Response<LoyaltyPointsUpdateResponse>
 
-    @POST("api/loyalty/wallet/issue")
+    @POST("v1/loyalty/wallet/issue")
     suspend fun issueWallet(
         @Body request: WalletIssueRequest,
     ): Response<WalletIssueResponse>
 
-    @POST("api/loyalty/wallet/resync")
+    @POST("v1/loyalty/wallet/resync")
     suspend fun resyncWallet(
         @Body request: WalletResyncRequest,
     ): Response<WalletResyncResponse>
+
+    @GET("v1/loyalty/rewards")
+    suspend fun getRewards(): Response<LoyaltyRewardsResponse>
 }
