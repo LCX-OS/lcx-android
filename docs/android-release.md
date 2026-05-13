@@ -23,6 +23,7 @@ Configura los valores reales en `~/.gradle/gradle.properties` o como variables d
 
 ```properties
 LCX_PROD_API_BASE_URL=https://...
+LCX_PROD_PLATFORM_BASE_URL=https://...
 LCX_PROD_NOTIFICATIONS_BASE_URL=https://...
 LCX_PROD_SUPABASE_URL=https://<project>.supabase.co
 LCX_PROD_SUPABASE_ANON_KEY=...
@@ -36,6 +37,7 @@ LCX_ZETTLE_APPROVED_APPLICATION_ID=com.cleanx.app
 Notas:
 
 - `LCX_PROD_NOTIFICATIONS_BASE_URL` puede omitirse si usa la misma base que `LCX_PROD_API_BASE_URL`.
+- `LCX_PROD_PLATFORM_BASE_URL` es la base canonica de `lcx-platform` para loyalty (`/v1/loyalty/*`). Puede omitirse solo si `LCX_PROD_NOTIFICATIONS_BASE_URL` ya apunta al mismo `lcx-platform`.
 - `:app:verifyProdConfig` falla de forma explicita si falta algun valor real, si queda un placeholder, si alguno de los flags `LCX_PROD_USE_REAL_*` se apaga, si el `applicationId` no coincide con el aprobado por Zettle o si falta el AAR de Brother.
 - El AAR esperado para impresion real es `feature/printing/libs/BrotherPrintLibrary.aar`.
 - `LCX_ZETTLE_GITHUB_TOKEN` no se trata como placeholder obligatorio por si solo. Solo hace falta cuando esta maquina necesita volver a resolver el SDK privado de Zettle desde GitHub Packages, por ejemplo en una cache nueva o despues de limpiar artefactos.

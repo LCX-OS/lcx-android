@@ -94,6 +94,7 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 export PATH="$JAVA_HOME/bin:$PATH"
 
 export LCX_DEV_API_BASE_URL="http://127.0.0.1:3000"
+export LCX_DEV_PLATFORM_BASE_URL="http://127.0.0.1:8080"
 export LCX_DEV_NOTIFICATIONS_BASE_URL="http://127.0.0.1:8080"
 export LCX_DEV_SUPABASE_URL="http://127.0.0.1:54321"
 export LCX_DEV_SUPABASE_ANON_KEY="$ANON_KEY"
@@ -111,17 +112,18 @@ Nota:
 Definicion en `app/build.gradle.kts`:
 
 - `dev`
-  - `API_BASE_URL` y `SUPABASE_*` desde env/gradle property.
+  - `API_BASE_URL`, `PLATFORM_BASE_URL` y `SUPABASE_*` desde env/gradle property.
   - `USE_REAL_ZETTLE=false` y `USE_REAL_BROTHER=false` por default.
   - se puede usar con hardware real para smoke local si activas los flags manualmente.
 - `prod`
-  - `API_BASE_URL`, `SUPABASE_*` y flags desde env/gradle properties.
+  - `API_BASE_URL`, `PLATFORM_BASE_URL`, `SUPABASE_*` y flags desde env/gradle properties.
   - `USE_REAL_ZETTLE=true` y `USE_REAL_BROTHER=true` son obligatorios.
   - `verifyProdConfig` falla si faltan valores reales, si queda algun placeholder, si el `applicationId` no coincide con el aprobado por Zettle o si falta el AAR de Brother.
 
 Variables soportadas:
 
 - `LCX_DEV_API_BASE_URL`
+- `LCX_DEV_PLATFORM_BASE_URL`
 - `LCX_DEV_NOTIFICATIONS_BASE_URL`
 - `LCX_DEV_SUPABASE_URL`
 - `LCX_DEV_SUPABASE_ANON_KEY`
@@ -130,6 +132,7 @@ Variables soportadas:
 - `LCX_DEV_USE_REAL_BROTHER`
 - `LCX_ANDROID_APPLICATION_ID`
 - `LCX_PROD_API_BASE_URL`
+- `LCX_PROD_PLATFORM_BASE_URL`
 - `LCX_PROD_NOTIFICATIONS_BASE_URL`
 - `LCX_PROD_SUPABASE_URL`
 - `LCX_PROD_SUPABASE_ANON_KEY`

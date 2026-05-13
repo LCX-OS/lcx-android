@@ -2,6 +2,7 @@ package com.cleanx.lcx.core.network
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonObject
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -11,20 +12,22 @@ import retrofit2.http.Query
 
 @Serializable
 data class CreateLoyaltyAccountRequest(
-    @SerialName("display_name") val displayName: String,
+    @SerialName("display_name") val displayName: String? = null,
     @SerialName("customer_id") val customerId: String? = null,
     @SerialName("loyalty_id") val loyaltyId: String? = null,
 )
 
 @Serializable
 data class EarnLoyaltyPointsRequest(
-    @SerialName("account_id") val accountId: String? = null,
-    @SerialName("loyalty_id") val loyaltyId: String? = null,
+    @SerialName("account_id") val accountId: String,
     @SerialName("source_type") val sourceType: String,
     @SerialName("source_ref_id") val sourceRefId: String,
     val quantity: Double? = null,
     val points: Int? = null,
+    @SerialName("ticket_id") val ticketId: String? = null,
     @SerialName("branch_id") val branchId: String? = null,
+    @SerialName("requested_by") val requestedBy: String? = null,
+    val metadata: JsonObject? = null,
 )
 
 @Serializable
@@ -33,6 +36,7 @@ data class RedeemLoyaltyPointsRequest(
     @SerialName("reward_id") val rewardId: String,
     @SerialName("source_ref_id") val sourceRefId: String,
     @SerialName("branch_id") val branchId: String? = null,
+    @SerialName("requested_by") val requestedBy: String? = null,
 )
 
 @Serializable
@@ -54,9 +58,6 @@ data class LoyaltyAccountDto(
     @SerialName("display_name") val displayName: String? = null,
     @SerialName("points_balance") val pointsBalance: Int,
     val status: String,
-    @SerialName("wallet_apple_serial") val walletAppleSerial: String? = null,
-    @SerialName("wallet_google_object_id") val walletGoogleObjectId: String? = null,
-    @SerialName("chain_wallet_address") val chainWalletAddress: String? = null,
     @SerialName("add_to_apple_wallet_url") val addToAppleWalletUrl: String,
     @SerialName("add_to_google_wallet_url") val addToGoogleWalletUrl: String,
     @SerialName("created_at") val createdAt: String,
@@ -66,7 +67,7 @@ data class LoyaltyAccountDto(
 @Serializable
 data class LoyaltyEventDto(
     val id: String,
-    @SerialName("account_id") val accountId: String,
+    @SerialName("account_id") val accountId: String? = null,
     @SerialName("event_type") val eventType: String,
     @SerialName("source_type") val sourceType: String,
     @SerialName("source_ref_id") val sourceRefId: String,
@@ -75,7 +76,7 @@ data class LoyaltyEventDto(
     @SerialName("branch_id") val branchId: String? = null,
     @SerialName("reward_id") val rewardId: String? = null,
     @SerialName("requested_by") val requestedBy: String? = null,
-    @SerialName("chain_tx_hash") val chainTxHash: String? = null,
+    val metadata: JsonObject? = null,
     @SerialName("created_at") val createdAt: String,
 )
 
@@ -99,7 +100,7 @@ data class LoyaltyAccountsListData(
 @Serializable
 data class LoyaltyAccountDetailData(
     val account: LoyaltyAccountDto,
-    @SerialName("recent_events") val recentEvents: List<LoyaltyEventDto>,
+    val events: List<LoyaltyEventDto>,
 )
 
 @Serializable
@@ -261,5 +262,7 @@ interface LoyaltyApi {
     ): Response<WalletResyncResponse>
 
     @GET("v1/loyalty/rewards")
-    suspend fun getRewards(): Response<LoyaltyRewardsResponse>
+    suspend fun getRewards(
+        @Query("include_inactive") includeInactive: Boolean? = null,
+    ): Response<LoyaltyRewardsResponse>
 }
