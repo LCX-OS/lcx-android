@@ -14,6 +14,7 @@ Optional:
   LCX_AUTH_PASSWORD=<password>                 # used to derive a Supabase access token when bearer is empty
   NEXT_PUBLIC_SUPABASE_URL=<url>               # read from env or lcx-pwa/.env.local when deriving a token
   NEXT_PUBLIC_SUPABASE_ANON_KEY=<key>          # read from env or lcx-pwa/.env.local when deriving a token
+  LCX_SMOKE_ENV_FILE=<path>                    # defaults to ../.env.development
   LCX_PLATFORM_ENV_FILE=<path>                 # defaults to ../lcx-platform/deploy/gcp-k3s/prod.env
   LCX_PWA_ENV_FILE=<path>                      # defaults to ../lcx-pwa/.env.local
   LCX_LOYALTY_SMOKE_ACCOUNT_ID=<uuid>          # also checks account detail and wallet issue
@@ -70,9 +71,10 @@ workspace_root="$(cd "${android_root}/.." && pwd)"
 
 platform_env_file="${LCX_PLATFORM_ENV_FILE:-${workspace_root}/lcx-platform/deploy/gcp-k3s/prod.env}"
 pwa_env_file="${LCX_PWA_ENV_FILE:-${workspace_root}/lcx-pwa/.env.local}"
+smoke_env_file="${LCX_SMOKE_ENV_FILE:-${workspace_root}/.env.development}"
 
-base_url="${LCX_PLATFORM_BASE_URL:-}"
-token="${LCX_PLATFORM_BEARER_TOKEN:-}"
+base_url="${LCX_PLATFORM_BASE_URL:-$(read_dotenv_value "$smoke_env_file" "LCX_PLATFORM_BASE_URL")}"
+token="${LCX_PLATFORM_BEARER_TOKEN:-$(read_dotenv_value "$smoke_env_file" "LCX_PLATFORM_BEARER_TOKEN")}"
 
 if [[ -z "$base_url" ]]; then
   base_url="$(read_dotenv_value "$platform_env_file" "PUBLIC_BASE_URL")"
@@ -96,11 +98,27 @@ trap 'rm -rf "$tmp_dir"' EXIT
 if [[ -z "$token" ]]; then
   supabase_url="${NEXT_PUBLIC_SUPABASE_URL:-}"
   supabase_anon_key="${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}"
-  auth_email="${LCX_AUTH_EMAIL:-${E2E_EMAIL:-}}"
-  auth_password="${LCX_AUTH_PASSWORD:-${E2E_PASSWORD:-}}"
+  auth_email="${LCX_AUTH_EMAIL:-$(read_dotenv_value "$smoke_env_file" "LCX_AUTH_EMAIL")}"
+  auth_password="${LCX_AUTH_PASSWORD:-$(read_dotenv_value "$smoke_env_file" "LCX_AUTH_PASSWORD")}"
+
+  if [[ -z "$auth_email" ]]; then
+    auth_email="${E2E_EMAIL:-$(read_dotenv_value "$smoke_env_file" "E2E_EMAIL")}"
+  fi
+
+  if [[ -z "$auth_password" ]]; then
+    auth_password="${E2E_PASSWORD:-$(read_dotenv_value "$smoke_env_file" "E2E_PASSWORD")}"
+  fi
+
+  if [[ -z "$supabase_url" ]]; then
+    supabase_url="$(read_dotenv_value "$smoke_env_file" "NEXT_PUBLIC_SUPABASE_URL")"
+  fi
 
   if [[ -z "$supabase_url" ]]; then
     supabase_url="$(read_dotenv_value "$pwa_env_file" "NEXT_PUBLIC_SUPABASE_URL")"
+  fi
+
+  if [[ -z "$supabase_anon_key" ]]; then
+    supabase_anon_key="$(read_dotenv_value "$smoke_env_file" "NEXT_PUBLIC_SUPABASE_ANON_KEY")"
   fi
 
   if [[ -z "$supabase_anon_key" ]]; then
