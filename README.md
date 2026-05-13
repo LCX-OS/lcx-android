@@ -118,7 +118,7 @@ Definicion en `app/build.gradle.kts`:
 - `prod`
   - `API_BASE_URL`, `PLATFORM_BASE_URL`, `SUPABASE_*` y flags desde env/gradle properties.
   - `USE_REAL_ZETTLE=true` y `USE_REAL_BROTHER=true` son obligatorios.
-  - `verifyProdConfig` falla si faltan valores reales, si queda algun placeholder, si el `applicationId` no coincide con el aprobado por Zettle o si falta el AAR de Brother.
+  - `verifyProdConfig` falla si faltan valores reales, si queda algun placeholder, si `PLATFORM_BASE_URL` no esta configurado explicitamente, si el `applicationId` no coincide con el aprobado por Zettle o si falta el AAR de Brother.
 
 Variables soportadas:
 
@@ -178,14 +178,9 @@ Si el AAR no existe, `dev` puede seguir compilando con fallback/stub. `prod` no.
 ## Release Android firmado
 
 - Solo existen dos ambientes: `dev` y `prod`.
-- El artefacto principal de release es el APK firmado de `./gradlew :app:assembleProdRelease --console=plain`.
-- La distribucion 0->1 es APK firmado por Drive privado; Play/AAB queda fuera del flujo inicial.
-- Valida ambiente y signing con `./gradlew :app:verifyProdConfig :app:verifyReleaseSigning --console=plain`.
-- El `release` signing se configura fuera de git con `~/.gradle/gradle.properties` o `key.properties` local.
-- Guia operativa y checklist detallado: `docs/android-release.md`.
-- Rollout sin Google Play: `docs/private-apk-rollout.md`.
-- Paquete para Drive privado: `scripts/release/package-private-apk.sh`.
-- `./gradlew :app:bundleProdRelease --console=plain` puede seguir usandose si luego necesitas Play Console o Internal App Sharing, pero no es el flujo principal.
+- Build/signing: `docs/android-release.md`.
+- Instalacion 0->1: `docs/private-apk-rollout.md`.
+- Artefacto principal: APK firmado `prodRelease`; Play/AAB queda fuera del flujo inicial.
 - Para `prodRelease` con Zettle real, mantén `LCX_ANDROID_APPLICATION_ID=com.cleanx.app`.
 - `LCX_ZETTLE_GITHUB_TOKEN` solo hace falta cuando esta maquina necesita volver a resolver el SDK privado de Zettle desde GitHub Packages.
 
@@ -223,21 +218,9 @@ Comando base:
 adb logcat -v threadtime | rg -i "TXN|HTTP|TICKET|PAYMENT|PRINT|AUTH|WATER|CHECKLIST|CAJA|Correlation|Session"
 ```
 
-## QA minimo P0 (device fisico)
+## QA minimo P0
 
-- Login valido/invalido.
-- Create Ticket (`POST /api/tickets`).
-- Charge:
-  - success,
-  - cancel (no marcar `paid`),
-  - success + fallo API (retry de sync, no recobrar).
-- Print:
-  - success,
-  - fail + retry,
-  - skip.
-- Resume tras kill app (`resumeTransaction`).
-- Caso `OPENING_CHECKLIST_BLOCKING_OPERATION` (409) con mensaje claro.
-
+Usa el smoke por sucursal de `docs/private-apk-rollout.md`.
 La evidencia viva queda en `docs/evidence/`; los reportes narrativos fechados quedaron archivados en `docs/archive/qa/`.
 
 ## Checklist de salida (release gate)

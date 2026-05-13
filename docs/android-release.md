@@ -1,8 +1,8 @@
-# Android Release Signing y Distribucion
+# Android Release Signing y Build
 
 Esta guia deja operativo el release Android con solo dos ambientes: `dev` y `prod`.
-El artefacto principal es el APK firmado generado por `:app:assembleProdRelease` para distribucion interna controlada.
-Para el 0->1 no se usa Google Play, Internal App Sharing ni AAB. `bundleProdRelease` puede seguir existiendo, pero es secundario.
+El artefacto principal es el APK firmado generado por `:app:assembleProdRelease`.
+La instalacion y rollout en dispositivos vive en [`private-apk-rollout.md`](private-apk-rollout.md).
 
 ## 1. Modelo de ambientes
 
@@ -37,7 +37,7 @@ LCX_ZETTLE_APPROVED_APPLICATION_ID=com.cleanx.app
 Notas:
 
 - `LCX_PROD_NOTIFICATIONS_BASE_URL` puede omitirse si usa la misma base que `LCX_PROD_API_BASE_URL`.
-- `LCX_PROD_PLATFORM_BASE_URL` es la base canonica de `lcx-platform` para loyalty (`/v1/loyalty/*`). Puede omitirse solo si `LCX_PROD_NOTIFICATIONS_BASE_URL` ya apunta al mismo `lcx-platform`.
+- `LCX_PROD_PLATFORM_BASE_URL` es obligatorio y debe apuntar a `lcx-platform`; loyalty usa `/v1/loyalty/*` desde esa base.
 - `:app:verifyProdConfig` falla de forma explicita si falta algun valor real, si queda un placeholder, si alguno de los flags `LCX_PROD_USE_REAL_*` se apaga, si el `applicationId` no coincide con el aprobado por Zettle o si falta el AAR de Brother.
 - El AAR esperado para impresion real es `feature/printing/libs/BrotherPrintLibrary.aar`.
 - `LCX_ZETTLE_GITHUB_TOKEN` no se trata como placeholder obligatorio por si solo. Solo hace falta cuando esta maquina necesita volver a resolver el SDK privado de Zettle desde GitHub Packages, por ejemplo en una cache nueva o despues de limpiar artefactos.
@@ -101,9 +101,17 @@ Opcional:
 ./gradlew :app:signingReport --console=plain
 ```
 
-## 5. Artefactos
+Si el release toca loyalty y tienes token operativo de plataforma:
 
-### Artefacto principal
+```bash
+LCX_PLATFORM_BASE_URL="$LCX_PROD_PLATFORM_BASE_URL" \
+LCX_PLATFORM_BEARER_TOKEN="$LCX_PLATFORM_BEARER_TOKEN" \
+scripts/qa/loyalty-platform-smoke.sh
+```
+
+## 5. Artefacto
+
+Genera el APK firmado:
 
 ```bash
 ./gradlew :app:assembleProdRelease --console=plain
@@ -113,25 +121,23 @@ Salida esperada:
 
 - `app/build/outputs/apk/prod/release/app-prod-release.apk`
 
-Este es el canal default para este repo: APK firmado y distribuido por un medio interno controlado como MDM, drive corporativo o enlace privado.
-
-Para empaquetarlo para Drive privado:
+Empaqueta los archivos operativos para instalacion privada:
 
 ```bash
 scripts/release/package-private-apk.sh
 ```
 
-Salida esperada:
+Salida esperada en `build/release-private/v1.0.0+100/`:
 
-- `build/release-private/v1.0.0+100/app-prod-release.apk`
-- `build/release-private/v1.0.0+100/SHA256SUMS.txt`
-- `build/release-private/v1.0.0+100/SIGNING_CERTS.txt`
-- `build/release-private/v1.0.0+100/RELEASE_NOTES.md`
-- `build/release-private/v1.0.0+100/INSTALL_CHECKLIST.md`
+- `app-prod-release.apk`
+- `SHA256SUMS.txt`
+- `SIGNING_CERTS.txt`
+- `RELEASE_NOTES.md`
+- `INSTALL_CHECKLIST.md`
 
-Sube el contenido de esa carpeta a Drive privado en `LCX Android Releases/v1.0.0+100/`.
+No publiques desde esta guia. Para permisos, instalacion y oleadas usa [`private-apk-rollout.md`](private-apk-rollout.md).
 
-### Artefacto opcional
+## 6. Artefacto opcional
 
 ```bash
 ./gradlew :app:bundleProdRelease --console=plain
@@ -143,7 +149,7 @@ Salida esperada:
 
 Usalo solo si luego quieres pasar por Play Console o Internal App Sharing. No es un requisito para el flujo normal de release interno.
 
-## 6. Fallas explicitas esperadas
+## 7. Fallas explicitas esperadas
 
 Los bloqueos reales que el build debe reportar de forma clara son:
 

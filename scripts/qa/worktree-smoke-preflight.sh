@@ -4,8 +4,8 @@ set -euo pipefail
 # Non-destructive smoke helper for local Android+backend loop.
 # Designed for worktree lanes to validate environment quickly.
 
-ROOT_ANDROID="/Users/diegolden/Code/LCX/lcx-android"
-ROOT_WEB="/Users/diegolden/Code/LCX/v0-lcx-pwa"
+ROOT_ANDROID="${ROOT_ANDROID:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
+ROOT_WEB="${ROOT_WEB:-$(cd "$ROOT_ANDROID/../lcx-pwa" 2>/dev/null && pwd || printf '%s' "/Users/diegolden/Code/LCX/v0-lcx-pwa")}"
 ADB_BIN="${ADB_BIN:-/Users/diegolden/Library/Android/sdk/platform-tools/adb}"
 JAVA_HOME_DEFAULT="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 
@@ -25,6 +25,7 @@ fi
 # 1) Device + reverse ports
 "$ADB_BIN" devices -l
 "$ADB_BIN" reverse tcp:3000 tcp:3000
+"$ADB_BIN" reverse tcp:8080 tcp:8080
 "$ADB_BIN" reverse tcp:54321 tcp:54321
 "$ADB_BIN" reverse --list
 
@@ -52,6 +53,7 @@ fi
 
 echo "\n== Env preview =="
 echo "LCX_DEV_API_BASE_URL=http://127.0.0.1:3000"
+echo "LCX_DEV_PLATFORM_BASE_URL=http://127.0.0.1:8080"
 echo "LCX_DEV_SUPABASE_URL=http://127.0.0.1:54321"
 if [[ -n "$ANON_KEY" ]]; then
   echo "LCX_DEV_SUPABASE_ANON_KEY=<resolved>"
@@ -65,6 +67,7 @@ if [[ "$RUN_INSTALL" == true ]]; then
   export JAVA_HOME="${JAVA_HOME:-$JAVA_HOME_DEFAULT}"
   export PATH="$JAVA_HOME/bin:$PATH"
   export LCX_DEV_API_BASE_URL="http://127.0.0.1:3000"
+  export LCX_DEV_PLATFORM_BASE_URL="http://127.0.0.1:8080"
   export LCX_DEV_SUPABASE_URL="http://127.0.0.1:54321"
   export LCX_DEV_SUPABASE_ANON_KEY="$ANON_KEY"
 

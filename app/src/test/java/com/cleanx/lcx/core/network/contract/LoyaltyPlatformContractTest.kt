@@ -1,5 +1,7 @@
 package com.cleanx.lcx.core.network.contract
 
+import com.cleanx.lcx.core.config.BuildConfigProvider
+import com.cleanx.lcx.core.di.NetworkModule
 import com.cleanx.lcx.core.network.CreateLoyaltyAccountRequest
 import com.cleanx.lcx.core.network.EarnLoyaltyPointsRequest
 import com.cleanx.lcx.core.network.LoyaltyApi
@@ -10,6 +12,9 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -26,10 +31,48 @@ class LoyaltyPlatformContractTest : ContractTestBase() {
     fun setUpLoyaltyApi() {
         loyaltyApi = Retrofit.Builder()
             .baseUrl(server.url("/"))
-            .client(okhttp3.OkHttpClient.Builder().build())
+            .client(OkHttpClient.Builder().build())
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
             .create(LoyaltyApi::class.java)
+    }
+
+    @Test
+    fun `network module wires loyalty api to platform base url`() = runTest {
+        val apiServer = MockWebServer()
+        apiServer.start()
+        try {
+            apiServer.enqueue(MockResponse().setResponseCode(500))
+            enqueue(
+                """
+                {
+                  "data": { "rewards": [] },
+                  "error": null,
+                  "code": null,
+                  "correlation_id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+                }
+                """.trimIndent(),
+            )
+
+            val retrofit = NetworkModule.providePlatformRetrofit(
+                client = OkHttpClient.Builder().build(),
+                json = json,
+                config = fakeConfig(
+                    apiBaseUrl = apiServer.url("/").toString().trimEnd('/'),
+                    platformBaseUrl = server.url("/").toString().trimEnd('/'),
+                ),
+            )
+            val api = NetworkModule.provideLoyaltyApi(retrofit)
+
+            val response = api.getRewards()
+            val request = server.takeRequest()
+
+            assertTrue(response.isSuccessful)
+            assertEquals("/v1/loyalty/rewards", request.path)
+            assertEquals(0, apiServer.requestCount)
+        } finally {
+            apiServer.shutdown()
+        }
     }
 
     @Test
@@ -349,5 +392,23 @@ class LoyaltyPlatformContractTest : ContractTestBase() {
         assertEquals("true", request.requestUrl?.queryParameter("include_inactive"))
         assertTrue(response.isSuccessful)
         assertEquals(35, response.body()?.data?.rewards?.first()?.pointsCost)
+    }
+
+    private fun fakeConfig(
+        apiBaseUrl: String,
+        platformBaseUrl: String,
+    ): BuildConfigProvider = object : BuildConfigProvider {
+        override val applicationId: String = "com.cleanx.app"
+        override val apiBaseUrl: String = apiBaseUrl
+        override val platformBaseUrl: String = platformBaseUrl
+        override val notificationsBaseUrl: String = platformBaseUrl
+        override val supabaseUrl: String = "https://example.supabase.co"
+        override val supabaseAnonKey: String = "anon"
+        override val zettleClientId: String = "client-id"
+        override val zettleRedirectUrl: String = "com.cleanx.app://oauth/callback"
+        override val zettleApprovedApplicationId: String = "com.cleanx.app"
+        override val isDebug: Boolean = true
+        override val useRealZettle: Boolean = false
+        override val useRealBrother: Boolean = false
     }
 }

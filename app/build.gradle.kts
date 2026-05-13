@@ -224,7 +224,7 @@ val prodNotificationsBaseUrl = readConfig(
 val prodPlatformBaseUrl = readConfig(
     propertyName = "LCX_PROD_PLATFORM_BASE_URL",
     envName = "LCX_PROD_PLATFORM_BASE_URL",
-    defaultValue = prodNotificationsBaseUrl,
+    defaultValue = "",
 )
 val prodSupabaseUrl = readConfig(
     propertyName = "LCX_PROD_SUPABASE_URL",
