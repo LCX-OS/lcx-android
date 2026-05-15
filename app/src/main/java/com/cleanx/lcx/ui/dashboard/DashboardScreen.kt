@@ -3,8 +3,10 @@ package com.cleanx.lcx.ui.dashboard
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -32,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -132,6 +135,7 @@ private fun DashboardContent(
         modifier = modifier
             .fillMaxSize()
             .padding(horizontal = LcxSpacing.screenHorizontal),
+        contentPadding = PaddingValues(bottom = 128.dp),
         verticalArrangement = Arrangement.spacedBy(LcxSpacing.sm),
     ) {
         item { Spacer(modifier = Modifier.height(LcxSpacing.xs)) }
@@ -266,50 +270,82 @@ private fun QuickActionsSection(
             fontWeight = FontWeight.SemiBold,
         )
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(LcxSpacing.sm),
-        ) {
-            Box(modifier = Modifier.weight(1f)) {
-                LcxActionCard(
-                    icon = Icons.Outlined.AddTask,
-                    title = "Nuevo encargo",
-                    description = "Ticket de mostrador",
-                    onClick = onOpenCreateTicket,
-                )
-            }
-            Box(modifier = Modifier.weight(1f)) {
-                LcxActionCard(
-                    icon = Icons.Outlined.LocalLaundryService,
-                    title = "Ventas",
-                    description = "Autoservicio y productos",
-                    onClick = onOpenSales,
-                )
-            }
-        }
+        val actions = listOf(
+            QuickActionSpec(
+                icon = Icons.Outlined.AddTask,
+                title = "Nuevo encargo",
+                description = "Ticket de mostrador",
+                onClick = onOpenCreateTicket,
+            ),
+            QuickActionSpec(
+                icon = Icons.Outlined.LocalLaundryService,
+                title = "Ventas",
+                description = "Autoservicio y productos",
+                onClick = onOpenSales,
+            ),
+            QuickActionSpec(
+                icon = Icons.AutoMirrored.Outlined.ReceiptLong,
+                title = "Caja",
+                description = "Apertura, gastos y corte",
+                onClick = onOpenCash,
+            ),
+            QuickActionSpec(
+                icon = Icons.Outlined.WaterDrop,
+                title = "Agua",
+                description = "Nivel y pedido",
+                onClick = onOpenWater,
+            ),
+        )
+        val fontScale = LocalDensity.current.fontScale
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(LcxSpacing.sm),
-        ) {
-            Box(modifier = Modifier.weight(1f)) {
-                LcxActionCard(
-                    icon = Icons.AutoMirrored.Outlined.ReceiptLong,
-                    title = "Caja",
-                    description = "Apertura, gastos y corte",
-                    onClick = onOpenCash,
-                )
-            }
-            Box(modifier = Modifier.weight(1f)) {
-                LcxActionCard(
-                    icon = Icons.Outlined.WaterDrop,
-                    title = "Agua",
-                    description = "Nivel y pedido",
-                    onClick = onOpenWater,
-                )
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            val singleColumn = fontScale >= 1.2f || maxWidth < 360.dp
+            if (singleColumn) {
+                Column(verticalArrangement = Arrangement.spacedBy(LcxSpacing.sm)) {
+                    actions.forEach { action ->
+                        DashboardQuickAction(action = action)
+                    }
+                }
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(LcxSpacing.sm)) {
+                    actions.chunked(2).forEach { rowActions ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(LcxSpacing.sm),
+                        ) {
+                            rowActions.forEach { action ->
+                                DashboardQuickAction(
+                                    action = action,
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }
+}
+
+private data class QuickActionSpec(
+    val icon: ImageVector,
+    val title: String,
+    val description: String,
+    val onClick: () -> Unit,
+)
+
+@Composable
+private fun DashboardQuickAction(
+    action: QuickActionSpec,
+    modifier: Modifier = Modifier,
+) {
+    LcxActionCard(
+        icon = action.icon,
+        title = action.title,
+        description = action.description,
+        onClick = action.onClick,
+        modifier = modifier,
+    )
 }
 
 @Composable

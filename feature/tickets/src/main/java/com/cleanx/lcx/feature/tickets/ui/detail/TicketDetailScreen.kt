@@ -47,6 +47,7 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.cleanx.lcx.core.model.PaymentMethod
 import com.cleanx.lcx.core.model.PaymentStatus
@@ -272,23 +273,6 @@ fun TicketDetailScreen(
 
                     HorizontalDivider()
 
-                    if (ticket.status != TicketStatus.DELIVERED && ticket.status != TicketStatus.PAID) {
-                        val nextLabel = when (ticket.status) {
-                            TicketStatus.RECEIVED -> "Marcar En Proceso"
-                            TicketStatus.PROCESSING -> "Marcar Listo"
-                            TicketStatus.READY -> "Marcar Entregado"
-                            TicketStatus.DELIVERED -> ""
-                            TicketStatus.PAID -> ""
-                        }
-                        LcxButton(
-                            text = nextLabel,
-                            onClick = { viewModel.advanceStatus() },
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = !state.isLoading,
-                            isLoading = state.isLoading,
-                        )
-                    }
-
                     if (ticket.status == TicketStatus.READY) {
                         LcxButton(
                             text = "Enviar recordatorio SMS",
@@ -335,27 +319,15 @@ fun TicketDetailScreen(
 
                     HorizontalDivider()
 
-                    Row(
+                    LcxButton(
+                        text = "Imprimir",
+                        onClick = { onPrint(ticket.id) },
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(LcxSpacing.sm),
-                    ) {
-                        LcxButton(
-                            text = "Cobrar (Zettle)",
-                            onClick = { onCharge(ticket.id) },
-                            modifier = Modifier.weight(1f),
-                            enabled = !state.isLoading,
-                            variant = ButtonVariant.Secondary,
-                        )
-                        LcxButton(
-                            text = "Imprimir",
-                            onClick = { onPrint(ticket.id) },
-                            modifier = Modifier.weight(1f),
-                            enabled = !state.isLoading,
-                            variant = ButtonVariant.Secondary,
-                        )
-                    }
+                        enabled = !state.isLoading,
+                        variant = ButtonVariant.Secondary,
+                    )
 
-                    Spacer(modifier = Modifier.height(LcxSpacing.lg))
+                    Spacer(modifier = Modifier.height(112.dp))
                 }
             }
         }
@@ -482,10 +454,13 @@ private fun DetailRow(label: String, value: String) {
             text = label,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(0.38f),
         )
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.End,
+            modifier = Modifier.weight(0.62f),
         )
     }
 }

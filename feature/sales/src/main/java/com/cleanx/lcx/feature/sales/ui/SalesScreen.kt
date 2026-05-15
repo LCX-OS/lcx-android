@@ -118,38 +118,40 @@ fun SalesScreen(
             }
         },
         bottomBar = {
-            LcxStickyActionBar {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(LcxSpacing.xs)) {
-                        Text(
-                            text = "Total a cobrar",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            text = formatCurrency(state.totalPrice),
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold,
+            if (state.totalPrice > 0.0 || state.isSubmitting || state.criticalFailure != null) {
+                LcxStickyActionBar {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(LcxSpacing.xs)) {
+                            Text(
+                                text = "Total a cobrar",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Text(
+                                text = formatCurrency(state.totalPrice),
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                        LcxButton(
+                            text = if (state.paymentMethod == PaymentMethod.CARD) {
+                                "Cobrar tarjeta"
+                            } else {
+                                "Cobrar"
+                            },
+                            onClick = viewModel::submit,
+                            modifier = Modifier.weight(1f),
+                            isLoading = state.isSubmitting,
+                            enabled = !state.isLoadingCatalogs &&
+                                !state.customer.isSaving &&
+                                state.totalPrice > 0.0 &&
+                                state.criticalFailure == null,
                         )
                     }
-                    LcxButton(
-                        text = if (state.paymentMethod == PaymentMethod.CARD) {
-                            "Cobrar tarjeta"
-                        } else {
-                            "Cobrar"
-                        },
-                        onClick = viewModel::submit,
-                        modifier = Modifier.weight(1f),
-                        isLoading = state.isSubmitting,
-                        enabled = !state.isLoadingCatalogs &&
-                            !state.customer.isSaving &&
-                            state.totalPrice > 0.0 &&
-                            state.criticalFailure == null,
-                    )
                 }
             }
         },

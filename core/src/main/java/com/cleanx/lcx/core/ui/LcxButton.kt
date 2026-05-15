@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.cleanx.lcx.core.theme.LcxError
 import com.cleanx.lcx.core.theme.LcxPillShape
@@ -119,9 +120,19 @@ private fun ButtonContent(
                 strokeWidth = 2.dp,
                 color = indicatorColor,
             )
-            Text(text = text, style = MaterialTheme.typography.labelLarge)
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelLarge,
+                maxLines = 2,
+                textAlign = TextAlign.Center,
+            )
         }
     } else {
-        Text(text = text, style = MaterialTheme.typography.labelLarge)
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelLarge,
+            maxLines = 2,
+            textAlign = TextAlign.Center,
+        )
     }
 }

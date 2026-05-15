@@ -1,6 +1,7 @@
 package com.cleanx.lcx.ui.more
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -198,6 +199,7 @@ fun MoreScreen(
     ) { innerPadding ->
         LazyColumn(
             modifier = Modifier.padding(innerPadding),
+            contentPadding = PaddingValues(bottom = 128.dp),
         ) {
             renderSectionGroup(
                 title = "Disponible",
