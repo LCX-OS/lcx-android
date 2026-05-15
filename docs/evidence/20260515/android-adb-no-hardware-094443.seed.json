@@ -1,0 +1,12 @@
+{
+  "branch": "La Esperanza",
+  "pin": "[REDACTED]",
+  "operatorId": "49fe51b9-5eec-4c6a-a027-83f11c4d2b43",
+  "operatorEmail": "e2e.operator@cleanx.local",
+  "operatorFullName": "Operador E2E",
+  "managerId": "9bd29c14-4631-41cc-a602-12acdd277318",
+  "ticket": {
+    "id": "d72e75b7-e866-4613-9c5b-dced1f4a79ef",
+    "ticketNumber": "T-20260515-0003"
+  }
+}

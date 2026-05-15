@@ -101,6 +101,7 @@ data class FlavorEnvironmentConfig(
     val notificationsBaseUrl: String,
     val supabaseUrl: String,
     val supabaseAnonKey: String,
+    val deviceAuthBootstrapToken: String,
     val useRealZettle: Boolean,
     val useRealBrother: Boolean,
     val applicationId: String,
@@ -246,6 +247,21 @@ val prodSupabaseAnonKey = readConfig(
     envName = "LCX_PROD_SUPABASE_ANON_KEY",
     defaultValue = "",
 )
+val sharedDeviceAuthBootstrapToken = readConfigAllowEmpty(
+    propertyName = "LCX_DEVICE_AUTH_BOOTSTRAP_TOKEN",
+    envName = "LCX_DEVICE_AUTH_BOOTSTRAP_TOKEN",
+    defaultValue = "",
+)
+val devDeviceAuthBootstrapToken = readConfig(
+    propertyName = "LCX_DEV_DEVICE_AUTH_BOOTSTRAP_TOKEN",
+    envName = "LCX_DEV_DEVICE_AUTH_BOOTSTRAP_TOKEN",
+    defaultValue = sharedDeviceAuthBootstrapToken.ifBlank { "local-device-auth" },
+)
+val prodDeviceAuthBootstrapToken = readConfig(
+    propertyName = "LCX_PROD_DEVICE_AUTH_BOOTSTRAP_TOKEN",
+    envName = "LCX_PROD_DEVICE_AUTH_BOOTSTRAP_TOKEN",
+    defaultValue = sharedDeviceAuthBootstrapToken,
+)
 val prodUseRealZettle = readBooleanConfig(
     propertyName = "LCX_PROD_USE_REAL_ZETTLE",
     envName = "LCX_PROD_USE_REAL_ZETTLE",
@@ -280,6 +296,7 @@ val prodEnvironmentConfig = FlavorEnvironmentConfig(
     notificationsBaseUrl = prodNotificationsBaseUrl,
     supabaseUrl = prodSupabaseUrl,
     supabaseAnonKey = prodSupabaseAnonKey,
+    deviceAuthBootstrapToken = prodDeviceAuthBootstrapToken,
     useRealZettle = prodUseRealZettle,
     useRealBrother = prodUseRealBrother,
     applicationId = resolveApplicationId(androidApplicationId, ""),
@@ -298,6 +315,7 @@ fun buildEnvironmentValidationError(config: FlavorEnvironmentConfig): String? {
         if (config.notificationsBaseUrl.isPlaceholderConfigValue()) add("${propertyPrefix}_NOTIFICATIONS_BASE_URL")
         if (config.supabaseUrl.isPlaceholderConfigValue()) add("${propertyPrefix}_SUPABASE_URL")
         if (config.supabaseAnonKey.isPlaceholderConfigValue()) add("${propertyPrefix}_SUPABASE_ANON_KEY")
+        if (config.deviceAuthBootstrapToken.isPlaceholderConfigValue()) add("${propertyPrefix}_DEVICE_AUTH_BOOTSTRAP_TOKEN")
     }
     val details = mutableListOf<String>()
 
@@ -369,6 +387,7 @@ android {
         buildConfigField("String", "NOTIFICATIONS_BASE_URL", "\"http://10.0.2.2:8080\"")
         buildConfigField("String", "SUPABASE_URL", "\"https://placeholder.supabase.co\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"placeholder-anon-key\"")
+        buildConfigField("String", "DEVICE_AUTH_BOOTSTRAP_TOKEN", "\"local-device-auth\"")
         buildConfigField("String", "ZETTLE_CLIENT_ID", zettleClientId.toBuildConfigString())
         buildConfigField("String", "ZETTLE_REDIRECT_URL", zettleRedirectUrl.toBuildConfigString())
         buildConfigField(
@@ -393,6 +412,7 @@ android {
             buildConfigField("String", "NOTIFICATIONS_BASE_URL", devNotificationsBaseUrl.toBuildConfigString())
             buildConfigField("String", "SUPABASE_URL", devSupabaseUrl.toBuildConfigString())
             buildConfigField("String", "SUPABASE_ANON_KEY", devSupabaseAnonKey.toBuildConfigString())
+            buildConfigField("String", "DEVICE_AUTH_BOOTSTRAP_TOKEN", devDeviceAuthBootstrapToken.toBuildConfigString())
             buildConfigField("Boolean", "USE_REAL_ZETTLE", devUseRealZettle.toString())
             buildConfigField("Boolean", "USE_REAL_BROTHER", devUseRealBrother.toString())
             manifestPlaceholders["allowBackup"] = "true"
@@ -405,6 +425,7 @@ android {
             buildConfigField("String", "NOTIFICATIONS_BASE_URL", prodNotificationsBaseUrl.toBuildConfigString())
             buildConfigField("String", "SUPABASE_URL", prodSupabaseUrl.toBuildConfigString())
             buildConfigField("String", "SUPABASE_ANON_KEY", prodSupabaseAnonKey.toBuildConfigString())
+            buildConfigField("String", "DEVICE_AUTH_BOOTSTRAP_TOKEN", prodDeviceAuthBootstrapToken.toBuildConfigString())
             buildConfigField("Boolean", "USE_REAL_ZETTLE", prodUseRealZettle.toString())
             buildConfigField("Boolean", "USE_REAL_BROTHER", prodUseRealBrother.toString())
             manifestPlaceholders["allowBackup"] = "false"
@@ -568,4 +589,6 @@ dependencies {
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.test.uiautomator)
+    androidTestImplementation(libs.retrofit)
+    androidTestImplementation(libs.retrofit.kotlinx.serialization)
 }

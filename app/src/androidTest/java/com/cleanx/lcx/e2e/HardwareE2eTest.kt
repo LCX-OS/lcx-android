@@ -302,6 +302,9 @@ class HardwareE2eRobot(
     }
 
     fun clickPrinterCard(nameOrAddress: String, timeoutMs: Long = DEFAULT_TIMEOUT_MS) {
+        if (runCatching { clickTag(LcxTestTags.printerCard(nameOrAddress), timeoutMs = 5_000L) }.isSuccess) {
+            return
+        }
         val matcher = hasClickAction() and hasAnyDescendant(
             hasComposeText(nameOrAddress, substring = true),
         )

@@ -44,6 +44,7 @@ class LoginViewModelTest {
         deviceAuthApi = mockk()
         sessionManager = mockk(relaxUnitFun = true)
         config = mockk()
+        every { config.deviceAuthBootstrapToken } returns "local-device-auth"
         supabaseClient = mockk()
         authRepository = AuthRepository(
             authApi = authApi,
@@ -65,7 +66,7 @@ class LoginViewModelTest {
     @Test
     fun `init restores selected branch and loads operators`() = runTest {
         coEvery { deviceAuthApi.branches() } returns Response.success(DeviceBranchesResponse(listOf("La Esperanza")))
-        coEvery { deviceAuthApi.operators("La Esperanza") } returns Response.success(
+        coEvery { deviceAuthApi.operators("local-device-auth", "La Esperanza") } returns Response.success(
             DeviceOperatorsResponse(
                 listOf(DeviceOperatorResponse("operator-1", "Operador Uno", "La Esperanza", hasPin = true)),
             ),

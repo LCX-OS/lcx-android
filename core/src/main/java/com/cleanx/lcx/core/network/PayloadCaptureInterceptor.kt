@@ -147,6 +147,7 @@ private fun Headers.toSafeMap(): Map<String, String> {
                 "apikey",
                 "cookie",
                 "set-cookie",
+                "x-lcx-device-auth-token",
                 "x-client-info" -> "<redacted>"
                 else -> raw.trim().take(MAX_HEADER_CHARS)
             }

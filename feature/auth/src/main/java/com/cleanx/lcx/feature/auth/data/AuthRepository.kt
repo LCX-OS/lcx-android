@@ -103,7 +103,7 @@ class AuthRepository @Inject constructor(
 
     suspend fun loadDeviceOperators(branch: String): Result<List<DeviceOperatorResponse>> {
         return runCatching {
-            val response = deviceAuthApi.operators(branch)
+            val response = deviceAuthApi.operators(config.deviceAuthBootstrapToken, branch)
             if (!response.isSuccessful) throw IllegalStateException(parseError(response.errorBody()?.string()))
             response.body()?.data.orEmpty()
         }

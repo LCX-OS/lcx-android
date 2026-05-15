@@ -1,8 +1,12 @@
 #!/usr/bin/env node
 import { createRequire } from "node:module"
-import { resolve } from "node:path"
+import { dirname, resolve } from "node:path"
+import { fileURLToPath } from "node:url"
 
-const webRoot = process.env.WEB_ROOT || "/Users/diegolden/Code/LCX-OS/lcx-pwa"
+const scriptDir = dirname(fileURLToPath(import.meta.url))
+const androidRoot = resolve(scriptDir, "../..")
+const repoRoot = resolve(androidRoot, "..")
+const webRoot = process.env.WEB_ROOT || resolve(repoRoot, "lcx-pwa")
 const requireFromWeb = createRequire(resolve(webRoot, "package.json"))
 const { createClient } = requireFromWeb("@supabase/supabase-js")
 

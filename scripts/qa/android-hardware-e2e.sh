@@ -3,7 +3,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ANDROID_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-WEB_ROOT="${WEB_ROOT:-/Users/diegolden/Code/LCX-OS/lcx-pwa}"
+REPO_ROOT="$(cd "$ANDROID_ROOT/.." && pwd)"
+WEB_ROOT="${WEB_ROOT:-$REPO_ROOT/lcx-pwa}"
 ADB_BIN="${ADB_BIN:-/Users/diegolden/Library/Android/sdk/platform-tools/adb}"
 JAVA_HOME_DEFAULT="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 
@@ -186,6 +187,7 @@ export LCX_E2E_PIN="${LCX_E2E_PIN:-1234}"
 export LCX_E2E_TICKET_AMOUNT="${LCX_E2E_TICKET_AMOUNT:-1.00}"
 export LCX_E2E_BROTHER_PRINTER_NAME="${LCX_E2E_BROTHER_PRINTER_NAME:-QL-810W}"
 export LCX_E2E_ZETTLE_NETWORK_MODE="${LCX_E2E_ZETTLE_NETWORK_MODE:-wifi}"
+export LCX_DEVICE_AUTH_BOOTSTRAP_TOKEN="${LCX_DEVICE_AUTH_BOOTSTRAP_TOKEN:-local-device-auth}"
 
 case "$LCX_E2E_ZETTLE_NETWORK_MODE" in
   wifi|cellular|none) ;;
@@ -221,6 +223,7 @@ export LCX_DEV_PLATFORM_BASE_URL="${LCX_DEV_PLATFORM_BASE_URL:-http://127.0.0.1:
 export LCX_DEV_NOTIFICATIONS_BASE_URL="${LCX_DEV_NOTIFICATIONS_BASE_URL:-http://127.0.0.1:8080}"
 export LCX_DEV_SUPABASE_URL="${LCX_DEV_SUPABASE_URL:-http://127.0.0.1:54321}"
 export LCX_DEV_SUPABASE_ANON_KEY="$NEXT_PUBLIC_SUPABASE_ANON_KEY"
+export LCX_DEV_DEVICE_AUTH_BOOTSTRAP_TOKEN="${LCX_DEV_DEVICE_AUTH_BOOTSTRAP_TOKEN:-$LCX_DEVICE_AUTH_BOOTSTRAP_TOKEN}"
 export LCX_DEV_USE_REAL_ZETTLE="true"
 export LCX_DEV_USE_REAL_BROTHER="true"
 export LCX_ZETTLE_APPROVED_APPLICATION_ID="${LCX_ZETTLE_APPROVED_APPLICATION_ID:-com.cleanx.app}"
@@ -336,7 +339,7 @@ stop_capture() {
 }
 
 redact_sensitive_stream() {
-  perl -pe 's/(Authorization: Bearer )[A-Za-z0-9._-]+/${1}[REDACTED]/g; s/((?:\\)?"access_token(?:\\)?"\s*:\s*(?:\\)?")[^"\\]+/${1}[REDACTED]/g; s/((?:\\)?"refresh_token(?:\\)?"\s*:\s*(?:\\)?")[^"\\]+/${1}[REDACTED]/g; s/((?:\\)?"pin(?:\\)?"\s*:\s*(?:\\)?")[^"\\]+/${1}[REDACTED]/g; s/(accessToken=)[A-Za-z0-9._-]+/${1}[REDACTED]/g; s/(refreshToken=)[A-Za-z0-9._-]+/${1}[REDACTED]/g; s/(pin=)[^[:space:]&]+/${1}[REDACTED]/g'
+  perl -pe 's/(Authorization: Bearer )[A-Za-z0-9._-]+/${1}[REDACTED]/g; s/(X-LCX-Device-Auth-Token: )[^\r\n]+/${1}[REDACTED]/gi; s/((?:\\)?"access_token(?:\\)?"\s*:\s*(?:\\)?")[^"\\]+/${1}[REDACTED]/g; s/((?:\\)?"refresh_token(?:\\)?"\s*:\s*(?:\\)?")[^"\\]+/${1}[REDACTED]/g; s/((?:\\)?"pin(?:\\)?"\s*:\s*(?:\\)?")[^"\\]+/${1}[REDACTED]/g; s/((?:\\)?"x-lcx-device-auth-token(?:\\)?"\s*:\s*(?:\\)?")[^"\\]+/${1}[REDACTED]/gi; s/(accessToken=)[A-Za-z0-9._-]+/${1}[REDACTED]/g; s/(refreshToken=)[A-Za-z0-9._-]+/${1}[REDACTED]/g; s/(pin=)[^[:space:]&]+/${1}[REDACTED]/g'
 }
 
 redact_sensitive_files() {
@@ -351,7 +354,7 @@ redact_sensitive_files() {
     return
   fi
 
-  perl -0pi -e 's/(Authorization: Bearer )[A-Za-z0-9._-]+/${1}[REDACTED]/g; s/((?:\\)?"access_token(?:\\)?"\s*:\s*(?:\\)?")[^"\\]+/${1}[REDACTED]/g; s/((?:\\)?"refresh_token(?:\\)?"\s*:\s*(?:\\)?")[^"\\]+/${1}[REDACTED]/g; s/((?:\\)?"pin(?:\\)?"\s*:\s*(?:\\)?")[^"\\]+/${1}[REDACTED]/g; s/(accessToken=)[A-Za-z0-9._-]+/${1}[REDACTED]/g; s/(refreshToken=)[A-Za-z0-9._-]+/${1}[REDACTED]/g; s/(pin=)[^[:space:]&]+/${1}[REDACTED]/g' "${files[@]}"
+  perl -0pi -e 's/(Authorization: Bearer )[A-Za-z0-9._-]+/${1}[REDACTED]/g; s/(X-LCX-Device-Auth-Token: )[^\r\n]+/${1}[REDACTED]/gi; s/((?:\\)?"access_token(?:\\)?"\s*:\s*(?:\\)?")[^"\\]+/${1}[REDACTED]/g; s/((?:\\)?"refresh_token(?:\\)?"\s*:\s*(?:\\)?")[^"\\]+/${1}[REDACTED]/g; s/((?:\\)?"pin(?:\\)?"\s*:\s*(?:\\)?")[^"\\]+/${1}[REDACTED]/g; s/((?:\\)?"x-lcx-device-auth-token(?:\\)?"\s*:\s*(?:\\)?")[^"\\]+/${1}[REDACTED]/gi; s/(accessToken=)[A-Za-z0-9._-]+/${1}[REDACTED]/g; s/(refreshToken=)[A-Za-z0-9._-]+/${1}[REDACTED]/g; s/(pin=)[^[:space:]&]+/${1}[REDACTED]/g' "${files[@]}"
 }
 
 restore_device() {

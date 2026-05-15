@@ -5,6 +5,7 @@ import kotlinx.serialization.Serializable
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.Query
 
@@ -104,7 +105,10 @@ interface DeviceAuthApi {
     suspend fun branches(): Response<DeviceBranchesResponse>
 
     @GET("api/device-auth/operators")
-    suspend fun operators(@Query("branch") branch: String): Response<DeviceOperatorsResponse>
+    suspend fun operators(
+        @Header("X-LCX-Device-Auth-Token") deviceAuthToken: String,
+        @Query("branch") branch: String,
+    ): Response<DeviceOperatorsResponse>
 
     @POST("api/device-auth/pin")
     suspend fun signInWithPin(@Body request: DevicePinSignInRequest): Response<DeviceAuthSessionResponse>

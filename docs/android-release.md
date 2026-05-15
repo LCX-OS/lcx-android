@@ -27,6 +27,7 @@ LCX_PROD_PLATFORM_BASE_URL=https://...
 LCX_PROD_NOTIFICATIONS_BASE_URL=https://...
 LCX_PROD_SUPABASE_URL=https://<project>.supabase.co
 LCX_PROD_SUPABASE_ANON_KEY=...
+LCX_PROD_DEVICE_AUTH_BOOTSTRAP_TOKEN=...
 LCX_PROD_USE_REAL_ZETTLE=true
 LCX_PROD_USE_REAL_BROTHER=true
 
@@ -38,6 +39,7 @@ Notas:
 
 - `LCX_PROD_NOTIFICATIONS_BASE_URL` puede omitirse si usa la misma base que `LCX_PROD_API_BASE_URL`.
 - `LCX_PROD_PLATFORM_BASE_URL` es obligatorio y debe apuntar a `lcx-platform`; loyalty usa `/v1/loyalty/*` desde esa base.
+- `LCX_PROD_DEVICE_AUTH_BOOTSTRAP_TOKEN` debe coincidir con `LCX_DEVICE_AUTH_BOOTSTRAP_TOKEN` en el PWA/API para cargar operadores Android.
 - `:app:verifyProdConfig` falla de forma explicita si falta algun valor real, si queda un placeholder, si alguno de los flags `LCX_PROD_USE_REAL_*` se apaga, si el `applicationId` no coincide con el aprobado por Zettle o si falta el AAR de Brother.
 - El AAR esperado para impresion real es `feature/printing/libs/BrotherPrintLibrary.aar`.
 - `LCX_ZETTLE_GITHUB_TOKEN` no se trata como placeholder obligatorio por si solo. Solo hace falta cuando esta maquina necesita volver a resolver el SDK privado de Zettle desde GitHub Packages, por ejemplo en una cache nueva o despues de limpiar artefactos.
@@ -123,6 +125,7 @@ LCX_DEV_APPLICATION_ID_SUFFIX= \
 LCX_DEV_API_BASE_URL=http://127.0.0.1:3000 \
 LCX_DEV_SUPABASE_URL=http://127.0.0.1:54321 \
 LCX_DEV_PLATFORM_BASE_URL=http://127.0.0.1:8080 \
+LCX_DEV_DEVICE_AUTH_BOOTSTRAP_TOKEN=local-device-auth \
 LCX_DEV_USE_REAL_ZETTLE=true \
 LCX_DEV_USE_REAL_BROTHER=true \
 LCX_E2E_ZETTLE_NETWORK_MODE=wifi \
@@ -192,6 +195,7 @@ Usalo solo si luego quieres pasar por Play Console o Internal App Sharing. No es
 Los bloqueos reales que el build debe reportar de forma clara son:
 
 - faltan variables reales de `prod`
+- falta `LCX_PROD_DEVICE_AUTH_BOOTSTRAP_TOKEN`
 - `LCX_PROD_USE_REAL_ZETTLE=false`
 - `LCX_PROD_USE_REAL_BROTHER=false`
 - `LCX_ANDROID_APPLICATION_ID` no coincide con el app id aprobado por Zettle

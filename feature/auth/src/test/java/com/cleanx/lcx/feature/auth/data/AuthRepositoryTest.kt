@@ -37,6 +37,7 @@ class AuthRepositoryTest {
         supabaseClient = mockk(relaxed = true)
         config = mockk()
         every { config.supabaseUrl } returns "https://olheihdjfhzgrdpmylvh.supabase.co"
+        every { config.deviceAuthBootstrapToken } returns "local-device-auth"
         repository = AuthRepository(authApi, deviceAuthApi, sessionManager, supabaseClient, config, json)
     }
 

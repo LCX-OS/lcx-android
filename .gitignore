@@ -118,3 +118,4 @@ Thumbs.db
 # Local payload captures generated during manual QA/debugging.
 # Keep curated/redacted evidence tracked explicitly, but ignore new raw dumps by default.
 docs/evidence/**/payload-capture-*.jsonl
+docs/evidence/**/*.logcat.txt
