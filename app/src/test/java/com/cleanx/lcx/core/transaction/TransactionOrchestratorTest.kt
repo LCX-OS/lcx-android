@@ -9,6 +9,7 @@ import com.cleanx.lcx.core.network.TicketDraft
 import com.cleanx.lcx.core.transaction.data.SavedTransaction
 import com.cleanx.lcx.core.transaction.data.TransactionPersistence
 import com.cleanx.lcx.feature.payments.data.ChargeResult
+import com.cleanx.lcx.feature.payments.data.PAYMENT_REQUIRES_RECONCILIATION_ERROR_CODE
 import com.cleanx.lcx.feature.payments.data.PaymentRepository
 import com.cleanx.lcx.feature.printing.data.PrintRepository
 import com.cleanx.lcx.feature.printing.data.PrintResult
@@ -166,6 +167,33 @@ class TransactionOrchestratorTest {
         assertEquals("Error de red", (finalState as TransactionState.PaymentFailed).message)
 
         // Verify print was never called
+        coVerify(exactly = 0) { printRepository.printWithRetry(any(), any()) }
+    }
+
+    @Test
+    fun `payment requiring reconciliation does not retry charge`() = runTest {
+        coEvery {
+            ticketRepository.createTickets(any(), any())
+        } returns ApiResult.Success(listOf(createdTicket))
+
+        coEvery {
+            paymentRepository.charge(ticketId = "ticket-001", amount = 150.0)
+        } returns ChargeResult.ReaderFailed(
+            errorCode = PAYMENT_REQUIRES_RECONCILIATION_ERROR_CODE,
+            message = "Requiere conciliacion",
+        )
+
+        orchestrator.startTransaction(draft)
+
+        val failed = orchestrator.state.value
+        assertTrue("Expected PaymentFailed but was $failed", failed is TransactionState.PaymentFailed)
+        assertEquals(PAYMENT_REQUIRES_RECONCILIATION_ERROR_CODE, (failed as TransactionState.PaymentFailed).code)
+
+        orchestrator.retryCurrentStep()
+
+        coVerify(exactly = 1) {
+            paymentRepository.charge(ticketId = "ticket-001", amount = 150.0)
+        }
         coVerify(exactly = 0) { printRepository.printWithRetry(any(), any()) }
     }
 

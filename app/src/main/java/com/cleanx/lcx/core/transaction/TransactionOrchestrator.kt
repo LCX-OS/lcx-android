@@ -7,6 +7,7 @@ import com.cleanx.lcx.core.printing.toLabelData
 import com.cleanx.lcx.core.transaction.data.SavedTransaction
 import com.cleanx.lcx.core.transaction.data.TransactionPersistence
 import com.cleanx.lcx.feature.payments.data.ChargeResult
+import com.cleanx.lcx.feature.payments.data.PAYMENT_REQUIRES_RECONCILIATION_ERROR_CODE
 import com.cleanx.lcx.feature.payments.data.PaymentRepository
 import com.cleanx.lcx.feature.printing.data.PrintRepository
 import com.cleanx.lcx.feature.printing.data.PrintResult
@@ -162,10 +163,27 @@ class TransactionOrchestrator @Inject constructor(
                     }
                 }
 
-                // Ticket exists but payment not started / failed / cancelled
+                TransactionPhase.PAYMENT_FAILED -> {
+                    val ticket = saved.ticket
+                    if (ticket != null && saved.errorCode == PAYMENT_REQUIRES_RECONCILIATION_ERROR_CODE) {
+                        _state.value = TransactionState.PaymentFailed(
+                            ticket = ticket,
+                            message = saved.errorMessage ?: "Este ticket requiere conciliacion antes de otro cobro.",
+                            code = saved.errorCode,
+                        )
+                        running = false
+                    } else if (ticket != null) {
+                        executeChargePayment(ticket)
+                    } else {
+                        Timber.e("Cannot resume: no ticket saved for phase %s", saved.phase)
+                        _state.value = TransactionState.Idle
+                        running = false
+                    }
+                }
+
+                // Ticket exists but payment not started / cancelled
                 TransactionPhase.TICKET_CREATED,
                 TransactionPhase.CHARGING_PAYMENT,
-                TransactionPhase.PAYMENT_FAILED,
                 TransactionPhase.PAYMENT_CANCELLED -> {
                     val ticket = saved.ticket
                     if (ticket != null) {
@@ -315,6 +333,7 @@ class TransactionOrchestrator @Inject constructor(
                     TransactionState.PaymentFailed(
                         ticket = ticket,
                         message = result.message,
+                        code = result.errorCode,
                     )
                 )
                 running = false
@@ -414,6 +433,10 @@ class TransactionOrchestrator @Inject constructor(
             }
 
             is TransactionState.PaymentFailed -> {
+                if (current.code == PAYMENT_REQUIRES_RECONCILIATION_ERROR_CODE) {
+                    Timber.w("TransactionOrchestrator: payment retry blocked while ticket requires reconciliation")
+                    return
+                }
                 val ticket = current.ticket
                 running = true
                 correlationId?.let { CorrelationContext.set(it) }
@@ -490,7 +513,11 @@ class TransactionOrchestrator @Inject constructor(
 
             is ChargeResult.ReaderFailed -> {
                 emitAndPersist(
-                    TransactionState.PaymentFailed(ticket = ticket, message = result.message)
+                    TransactionState.PaymentFailed(
+                        ticket = ticket,
+                        message = result.message,
+                        code = result.errorCode,
+                    )
                 )
                 running = false
             }

@@ -34,6 +34,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -42,6 +43,7 @@ import com.cleanx.lcx.core.theme.LcxSpacing
 import com.cleanx.lcx.core.ui.EmptyState
 import com.cleanx.lcx.core.ui.ErrorState
 import com.cleanx.lcx.core.ui.LcxCard
+import com.cleanx.lcx.core.ui.LcxTestTags
 import com.cleanx.lcx.core.ui.LcxTextField
 import com.cleanx.lcx.core.ui.PaymentStatusChip
 import com.cleanx.lcx.core.ui.StatusChip
@@ -121,7 +123,10 @@ fun TicketListScreen(
             }
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = onCreateTicket) {
+            FloatingActionButton(
+                onClick = onCreateTicket,
+                modifier = Modifier.testTag(LcxTestTags.TICKET_CREATE_BUTTON),
+            ) {
                 Icon(Icons.Default.Add, contentDescription = "Crear encargo nuevo")
             }
         },
@@ -131,11 +136,13 @@ fun TicketListScreen(
             onRefresh = viewModel::refresh,
             modifier = Modifier
                 .fillMaxSize()
+                .testTag(LcxTestTags.TICKET_LIST_ROOT)
                 .padding(padding),
         ) {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
+                    .testTag(LcxTestTags.TICKET_LIST_SCROLL)
                     .padding(horizontal = LcxSpacing.md),
                 verticalArrangement = Arrangement.spacedBy(LcxSpacing.sm),
             ) {
@@ -263,10 +270,12 @@ private fun TicketListItem(
     onClick: () -> Unit,
 ) {
     LcxCard(
-        modifier = Modifier.clickable(
-            onClick = onClick,
-            onClickLabel = "Ver detalle del ticket ${ticket.ticketNumber}",
-        ),
+        modifier = Modifier
+            .testTag(LcxTestTags.ticketListItem(ticket.ticketNumber))
+            .clickable(
+                onClick = onClick,
+                onClickLabel = "Ver detalle del ticket ${ticket.ticketNumber}",
+            ),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

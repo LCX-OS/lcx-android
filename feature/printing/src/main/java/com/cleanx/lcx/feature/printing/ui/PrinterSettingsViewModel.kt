@@ -171,11 +171,17 @@ class PrinterSettingsViewModel @Inject constructor(
             )
             when (val result = printRepository.printWithRetry(testLabel)) {
                 is PrintResult.Success -> {
+                    Timber.tag("PRINT").i("Brother print success label=%s", testLabel.ticketNumber)
                     _transient.update {
                         it.copy(isPrinting = false, message = "Prueba de impresion exitosa")
                     }
                 }
                 is PrintResult.Error -> {
+                    Timber.tag("PRINT").e(
+                        "Brother print failed label=%s error=%s",
+                        testLabel.ticketNumber,
+                        result.message,
+                    )
                     _transient.update {
                         it.copy(isPrinting = false, message = "Error: ${result.message}")
                     }

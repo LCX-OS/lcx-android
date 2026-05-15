@@ -1,0 +1,40 @@
+INSTRUMENTATION_STATUS: class=com.cleanx.lcx.e2e.CriticalOperatorSmokeE2eTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=6
+INSTRUMENTATION_STATUS: stream=
+com.cleanx.lcx.e2e.CriticalOperatorSmokeE2eTest:
+INSTRUMENTATION_STATUS: test=operator_can_open_critical_modules_without_runtime_errors
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=com.cleanx.lcx.e2e.CriticalOperatorSmokeE2eTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=6
+INSTRUMENTATION_STATUS: stack=androidx.compose.ui.test.ComposeTimeoutException: Condition still not satisfied after 90000 ms
+	at androidx.compose.ui.test.AndroidComposeUiTestEnvironment$AndroidComposeUiTestImpl.waitUntil(ComposeUiTest.android.kt:755)
+	at androidx.compose.ui.test.junit4.AndroidComposeTestRule.waitUntil(AndroidComposeTestRule.android.kt:362)
+	at com.cleanx.lcx.e2e.HardwareE2eRobot.waitForTag(HardwareE2eTest.kt:278)
+	at com.cleanx.lcx.e2e.HardwareE2eRobot.ensureLoggedIn(HardwareE2eTest.kt:201)
+	at com.cleanx.lcx.e2e.CriticalOperatorSmokeE2eTest.operator_can_open_critical_modules_without_runtime_errors(HardwareE2eTest.kt:114)
+
+INSTRUMENTATION_STATUS: stream=
+Error in operator_can_open_critical_modules_without_runtime_errors(com.cleanx.lcx.e2e.CriticalOperatorSmokeE2eTest):
+androidx.compose.ui.test.ComposeTimeoutException: Condition still not satisfied after 90000 ms
+	at androidx.compose.ui.test.AndroidComposeUiTestEnvironment$AndroidComposeUiTestImpl.waitUntil(ComposeUiTest.android.kt:755)
+	at androidx.compose.ui.test.junit4.AndroidComposeTestRule.waitUntil(AndroidComposeTestRule.android.kt:362)
+	at com.cleanx.lcx.e2e.HardwareE2eRobot.waitForTag(HardwareE2eTest.kt:278)
+	at com.cleanx.lcx.e2e.HardwareE2eRobot.ensureLoggedIn(HardwareE2eTest.kt:201)
+	at com.cleanx.lcx.e2e.CriticalOperatorSmokeE2eTest.operator_can_open_critical_modules_without_runtime_errors(HardwareE2eTest.kt:114)
+
+INSTRUMENTATION_STATUS: test=operator_can_open_critical_modules_without_runtime_errors
+INSTRUMENTATION_STATUS_CODE: -2
+INSTRUMENTATION_STATUS: class=com.cleanx.lcx.e2e.DeviceLoginE2eTest
+INSTRUMENTATION_STATUS: current=2
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=6
+INSTRUMENTATION_STATUS: stream=
+com.cleanx.lcx.e2e.DeviceLoginE2eTest:
+INSTRUMENTATION_STATUS: test=login_with_seeded_branch_operator_and_pin_lands_on_dashboard
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_RESULT: shortMsg=Process crashed.
+INSTRUMENTATION_CODE: 0

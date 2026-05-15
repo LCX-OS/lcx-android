@@ -1,6 +1,7 @@
 package com.cleanx.lcx.feature.auth.data
 
 import com.cleanx.lcx.core.config.BuildConfigProvider
+import com.cleanx.lcx.core.model.UserRole
 import com.cleanx.lcx.core.session.SessionManager
 import io.github.jan.supabase.SupabaseClient
 import io.mockk.coEvery
@@ -21,6 +22,7 @@ import retrofit2.Response
 class AuthRepositoryTest {
 
     private lateinit var authApi: AuthApi
+    private lateinit var deviceAuthApi: DeviceAuthApi
     private lateinit var sessionManager: SessionManager
     private lateinit var supabaseClient: SupabaseClient
     private lateinit var config: BuildConfigProvider
@@ -30,11 +32,12 @@ class AuthRepositoryTest {
     @Before
     fun setUp() {
         authApi = mockk()
+        deviceAuthApi = mockk()
         sessionManager = mockk(relaxUnitFun = true)
         supabaseClient = mockk(relaxed = true)
         config = mockk()
         every { config.supabaseUrl } returns "https://olheihdjfhzgrdpmylvh.supabase.co"
-        repository = AuthRepository(authApi, sessionManager, supabaseClient, config, json)
+        repository = AuthRepository(authApi, deviceAuthApi, sessionManager, supabaseClient, config, json)
     }
 
     // -- Sign in success stores token --
@@ -116,6 +119,71 @@ class AuthRepositoryTest {
         coVerify { sessionManager.clearSession() }
     }
 
+    @Test
+    fun `signInWithPin success stores device session metadata`() = runTest {
+        coEvery { deviceAuthApi.signInWithPin(any()) } returns Response.success(
+            DeviceAuthSessionResponse(
+                accessToken = "device-access-token",
+                refreshToken = "device-refresh-token",
+                expiresIn = 3600,
+                expiresAt = 1_800_000_000,
+                profile = DeviceAuthProfileResponse(
+                    id = "operator-1",
+                    fullName = "Operador Uno",
+                    role = "employee",
+                    branch = "La Esperanza",
+                ),
+            ),
+        )
+
+        val result = repository.signInWithPin("operator-1", "La Esperanza", "1234")
+
+        assertTrue(result is AuthResult.Success)
+        assertEquals("operator-1", (result as AuthResult.Success).userId)
+        coVerify { sessionManager.saveAccessToken("device-access-token") }
+        coVerify { sessionManager.saveRefreshToken("device-refresh-token") }
+        coVerify { sessionManager.saveTokenExpiresAtEpochSeconds(1_800_000_000) }
+        coVerify { sessionManager.saveUserId("operator-1") }
+        coVerify { sessionManager.saveUserFullName("Operador Uno") }
+        coVerify { sessionManager.saveUserBranch("La Esperanza") }
+        coVerify { sessionManager.saveSelectedBranch("La Esperanza") }
+        coVerify { sessionManager.saveUserRole(UserRole.EMPLOYEE) }
+    }
+
+    @Test
+    fun `refreshSession success stores refreshed token`() = runTest {
+        every { sessionManager.getRefreshToken() } returns "refresh-token"
+        every { sessionManager.getUserId() } returns ""
+        every { sessionManager.getUserEmail() } returns null
+        coEvery { authApi.refreshSession(RefreshTokenRequest("refresh-token")) } returns Response.success(
+            SignInResponse(
+                accessToken = "new-access-token",
+                refreshToken = "new-refresh-token",
+                expiresIn = 3600,
+                expiresAt = 1_800_000_500,
+            ),
+        )
+
+        assertTrue(repository.refreshSession())
+
+        coVerify { sessionManager.saveAccessToken("new-access-token") }
+        coVerify { sessionManager.saveRefreshToken("new-refresh-token") }
+        coVerify { sessionManager.saveTokenExpiresAtEpochSeconds(1_800_000_500) }
+    }
+
+    @Test
+    fun `refreshSession failure clears session`() = runTest {
+        every { sessionManager.getRefreshToken() } returns "refresh-token"
+        coEvery { authApi.refreshSession(any()) } returns Response.error(
+            401,
+            """{"error":"invalid_grant"}""".toResponseBody("application/json".toMediaType()),
+        )
+
+        assertFalse(repository.refreshSession())
+
+        coVerify { sessionManager.clearSession() }
+    }
+
     // -- isAuthenticated returns correct state --
 
     @Test
@@ -158,7 +226,7 @@ class AuthRepositoryTest {
     @Test
     fun `isAuthenticated accepts loopback issuer aliases for local supabase`() {
         every { config.supabaseUrl } returns "http://10.0.2.2:54321"
-        repository = AuthRepository(authApi, sessionManager, supabaseClient, config, json)
+        repository = AuthRepository(authApi, deviceAuthApi, sessionManager, supabaseClient, config, json)
         val loopbackToken = buildJwtWithIssuer("http://127.0.0.1:54321/auth/v1")
         every { sessionManager.getAccessToken() } returns loopbackToken
 

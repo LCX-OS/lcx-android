@@ -13,6 +13,7 @@
 ## Operational Evidence
 
 - `docs/evidence/YYYYMMDD/`: smoke summaries, payload captures, and focused troubleshooting notes.
+- [`evidence/20260514/android-hardware-release-gate.md`](evidence/20260514/android-hardware-release-gate.md): Pixel 9 + Zettle + Brother hardware E2E evidence for the 2026-05-14 release gate.
 - `docs/logs/`: raw logcat captures kept for local debugging when a summarized note is not enough.
 
 ## Historical Snapshots

@@ -4,6 +4,7 @@ import com.cleanx.lcx.core.config.BuildConfigProvider
 import com.cleanx.lcx.core.network.PayloadCaptureInterceptor
 import com.cleanx.lcx.core.network.PayloadCaptureWriter
 import com.cleanx.lcx.feature.auth.data.AuthApi
+import com.cleanx.lcx.feature.auth.data.DeviceAuthApi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -78,5 +79,11 @@ object AuthModule {
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
         return retrofit.create(AuthApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideDeviceAuthApi(retrofit: Retrofit): DeviceAuthApi {
+        return retrofit.create(DeviceAuthApi::class.java)
     }
 }

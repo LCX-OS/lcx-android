@@ -95,6 +95,14 @@ class BrotherPrinterManager @Inject constructor(
             )
         }
 
+        printers.forEach { printer ->
+            Timber.tag("PRINT").d(
+                "Brother discovered printer: name=%s type=%s address=%s",
+                printer.name,
+                printer.connectionType,
+                printer.address,
+            )
+        }
         Timber.tag("PRINT").d("Brother discovery completed: %d printer(s)", printers.size)
         printers
     }

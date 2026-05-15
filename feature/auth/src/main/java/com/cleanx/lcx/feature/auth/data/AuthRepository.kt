@@ -17,6 +17,8 @@ import javax.inject.Singleton
 @Serializable
 private data class ProfileRow(
     @SerialName("role") val role: String,
+    @SerialName("branch") val branch: String? = null,
+    @SerialName("full_name") val fullName: String? = null,
 )
 
 /**
@@ -31,6 +33,7 @@ private data class ProfileRow(
 @Singleton
 class AuthRepository @Inject constructor(
     private val authApi: AuthApi,
+    private val deviceAuthApi: DeviceAuthApi,
     private val sessionManager: SessionManager,
     private val supabaseClient: SupabaseClient,
     private val config: BuildConfigProvider,
@@ -46,11 +49,17 @@ class AuthRepository @Inject constructor(
                 if (body != null) {
                     val userId = body.user?.id ?: body.userId ?: ""
                     val userEmail = body.user?.email?.takeIf { it.isNotBlank() } ?: email
-                    sessionManager.saveAccessToken(body.accessToken)
-                    sessionManager.saveUserEmail(userEmail)
+                    saveAuthSession(
+                        accessToken = body.accessToken,
+                        refreshToken = body.refreshToken,
+                        expiresIn = body.expiresIn,
+                        expiresAt = body.expiresAt,
+                        userId = userId,
+                        userEmail = userEmail,
+                    )
 
                     // Fetch and persist the user role from the profiles table.
-                    fetchAndSaveUserRole(userId)
+                    fetchAndSaveUserProfile(userId)
 
                     Timber.i("Auth: signed in user %s", userId)
                     AuthResult.Success(
@@ -82,6 +91,110 @@ class AuthRepository @Inject constructor(
     suspend fun signOut() {
         sessionManager.clearSession()
         Timber.i("Auth: signed out")
+    }
+
+    suspend fun loadDeviceBranches(): Result<List<String>> {
+        return runCatching {
+            val response = deviceAuthApi.branches()
+            if (!response.isSuccessful) throw IllegalStateException(parseError(response.errorBody()?.string()))
+            response.body()?.data.orEmpty()
+        }
+    }
+
+    suspend fun loadDeviceOperators(branch: String): Result<List<DeviceOperatorResponse>> {
+        return runCatching {
+            val response = deviceAuthApi.operators(branch)
+            if (!response.isSuccessful) throw IllegalStateException(parseError(response.errorBody()?.string()))
+            response.body()?.data.orEmpty()
+        }
+    }
+
+    suspend fun signInWithPin(
+        profileId: String,
+        branch: String,
+        pin: String,
+    ): AuthResult {
+        return try {
+            val response = deviceAuthApi.signInWithPin(
+                DevicePinSignInRequest(
+                    profileId = profileId,
+                    branch = branch,
+                    pin = pin,
+                ),
+            )
+            if (!response.isSuccessful) {
+                return AuthResult.Error(parseError(response.errorBody()?.string(), "PIN invalido."))
+            }
+
+            val body = response.body() ?: return AuthResult.Error("Respuesta vacia del servidor.")
+            saveDeviceSession(body)
+            AuthResult.Success(userId = body.profile.id, accessToken = body.accessToken)
+        } catch (e: Exception) {
+            Timber.e(e, "Auth: device PIN sign-in failed")
+            AuthResult.Error(e.message ?: "Error de conexion.")
+        }
+    }
+
+    suspend fun signInGuest(branch: String, code: String): AuthResult {
+        return try {
+            val response = deviceAuthApi.signInGuest(
+                DeviceGuestSignInRequest(
+                    branch = branch,
+                    code = code,
+                ),
+            )
+            if (!response.isSuccessful) {
+                return AuthResult.Error(parseError(response.errorBody()?.string(), "Codigo invitado invalido."))
+            }
+
+            val body = response.body() ?: return AuthResult.Error("Respuesta vacia del servidor.")
+            saveDeviceSession(body)
+            AuthResult.Success(userId = body.profile.id, accessToken = body.accessToken)
+        } catch (e: Exception) {
+            Timber.e(e, "Auth: guest sign-in failed")
+            AuthResult.Error(e.message ?: "Error de conexion.")
+        }
+    }
+
+    suspend fun restoreSession(): Boolean {
+        if (!isAuthenticated()) {
+            return refreshSession()
+        }
+
+        val expiresAt = sessionManager.getTokenExpiresAtEpochSeconds()
+        val shouldRefresh = expiresAt != null && expiresAt <= (System.currentTimeMillis() / 1000L) + 60L
+        return if (shouldRefresh) refreshSession() else true
+    }
+
+    suspend fun refreshSession(): Boolean {
+        val refreshToken = sessionManager.getRefreshToken()?.takeIf { it.isNotBlank() } ?: return false
+        return try {
+            val response = authApi.refreshSession(RefreshTokenRequest(refreshToken))
+            if (!response.isSuccessful) {
+                Timber.tag("AUTH").w("Refresh session failed: %s", response.code())
+                sessionManager.clearSession()
+                return false
+            }
+
+            val body = response.body() ?: return false
+            val userId = body.user?.id ?: body.userId ?: sessionManager.getUserId().orEmpty()
+            saveAuthSession(
+                accessToken = body.accessToken,
+                refreshToken = body.refreshToken ?: refreshToken,
+                expiresIn = body.expiresIn,
+                expiresAt = body.expiresAt,
+                userId = userId,
+                userEmail = body.user?.email ?: sessionManager.getUserEmail(),
+            )
+            if (userId.isNotBlank()) {
+                fetchAndSaveUserProfile(userId)
+            }
+            true
+        } catch (e: Exception) {
+            Timber.w(e, "Auth: refresh failed")
+            sessionManager.clearSession()
+            false
+        }
     }
 
     fun isAuthenticated(): Boolean {
@@ -116,14 +229,12 @@ class AuthRepository @Inject constructor(
     }
 
     fun getCurrentUserId(): String? {
-        // For now we don't persist userId separately; the token is the proof.
-        // A future enhancement could decode the JWT to extract sub.
-        return if (isAuthenticated()) "authenticated" else null
+        return sessionManager.getUserId()
     }
 
     fun getUserRole(): UserRole? = sessionManager.getUserRole()
 
-    private suspend fun fetchAndSaveUserRole(userId: String) {
+    private suspend fun fetchAndSaveUserProfile(userId: String) {
         try {
             val profile = supabaseClient.postgrest["profiles"]
                 .select { filter { eq("id", userId) } }
@@ -134,11 +245,61 @@ class AuthRepository @Inject constructor(
             } ?: UserRole.EMPLOYEE
 
             sessionManager.saveUserRole(role)
+            profile.fullName?.takeIf { it.isNotBlank() }?.let { sessionManager.saveUserFullName(it) }
+            sessionManager.saveUserBranch(profile.branch)
             Timber.i("Auth: user role = %s", role)
         } catch (e: Exception) {
             // Default to employee if profile fetch fails — non-blocking.
             Timber.w(e, "Auth: failed to fetch user role, defaulting to EMPLOYEE")
             sessionManager.saveUserRole(UserRole.EMPLOYEE)
+        }
+    }
+
+    private suspend fun saveAuthSession(
+        accessToken: String,
+        refreshToken: String?,
+        expiresIn: Long?,
+        expiresAt: Long?,
+        userId: String,
+        userEmail: String?,
+    ) {
+        sessionManager.saveAccessToken(accessToken)
+        refreshToken?.takeIf { it.isNotBlank() }?.let { sessionManager.saveRefreshToken(it) }
+        sessionManager.saveTokenExpiresAtEpochSeconds(
+            expiresAt ?: expiresIn?.let { (System.currentTimeMillis() / 1000L) + it },
+        )
+        userId.takeIf { it.isNotBlank() }?.let { sessionManager.saveUserId(it) }
+        userEmail?.takeIf { it.isNotBlank() }?.let { sessionManager.saveUserEmail(it) }
+    }
+
+    private suspend fun saveDeviceSession(body: DeviceAuthSessionResponse) {
+        saveAuthSession(
+            accessToken = body.accessToken,
+            refreshToken = body.refreshToken,
+            expiresIn = body.expiresIn,
+            expiresAt = body.expiresAt,
+            userId = body.profile.id,
+            userEmail = null,
+        )
+
+        sessionManager.saveUserFullName(body.profile.fullName)
+        sessionManager.saveUserBranch(body.profile.branch)
+        body.profile.branch?.takeIf { it.isNotBlank() }?.let { sessionManager.saveSelectedBranch(it) }
+        val role = UserRole.entries.firstOrNull {
+            it.name.equals(body.profile.role, ignoreCase = true)
+        } ?: UserRole.EMPLOYEE
+        sessionManager.saveUserRole(role)
+    }
+
+    private fun parseError(raw: String?, fallback: String = "Error de autenticacion."): String {
+        return try {
+            if (raw.isNullOrBlank()) fallback
+            else {
+                val err = json.decodeFromString(AuthErrorResponse.serializer(), raw)
+                err.errorDescription ?: err.message ?: err.error ?: fallback
+            }
+        } catch (_: Exception) {
+            fallback
         }
     }
 }

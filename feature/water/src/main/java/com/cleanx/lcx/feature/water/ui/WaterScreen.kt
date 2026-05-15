@@ -15,9 +15,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import com.cleanx.lcx.core.ui.ErrorState
+import com.cleanx.lcx.core.ui.LcxTestTags
 import com.cleanx.lcx.core.ui.LoadingOverlay
 
 private val TABS = listOf("Nivel Actual", "Historial")
@@ -49,6 +51,7 @@ fun WaterScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .testTag(LcxTestTags.WATER_ROOT)
                 .padding(padding),
         ) {
             // Tabs

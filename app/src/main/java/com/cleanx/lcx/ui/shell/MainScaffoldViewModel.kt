@@ -36,16 +36,41 @@ class MainScaffoldViewModel @Inject constructor(
             initialValue = null,
         )
 
-    val userBadgeText: StateFlow<String> = combine(userEmail, userRole) { email, role ->
+    val userFullName: StateFlow<String?> = sessionManager.observeUserFullName()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+            initialValue = null,
+        )
+
+    val userBranch: StateFlow<String?> = sessionManager.observeUserBranch()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+            initialValue = null,
+        )
+
+    val userBadgeText: StateFlow<String> = combine(userFullName, userEmail, userRole) { fullName, email, role ->
+        val displayName = fullName?.trim().orEmpty()
         val localPart = email?.substringBefore('@')?.trim().orEmpty()
-        if (localPart.isNotBlank()) {
-            localPart
+        when {
+            displayName.isNotBlank() -> displayName
+            localPart.isNotBlank() -> localPart
+            role == UserRole.SUPERADMIN -> "Superadmin"
+            role == UserRole.MANAGER -> "Gerente"
+            else -> "Operador"
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+        initialValue = "Operador",
+    )
+
+    val userStatusText: StateFlow<String> = combine(userBadgeText, userBranch) { user, branch ->
+        if (!branch.isNullOrBlank()) {
+            "$user · $branch"
         } else {
-            when (role) {
-                UserRole.SUPERADMIN -> "Superadmin"
-                UserRole.MANAGER -> "Gerente"
-                UserRole.EMPLOYEE -> "Operador"
-            }
+            user
         }
     }.stateIn(
         scope = viewModelScope,

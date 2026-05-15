@@ -199,6 +199,7 @@ class CashRepository @Inject constructor(
     }
 
     private fun currentUserIdFromToken(): String? {
+        sessionManager.getUserId()?.takeIf { it.isNotBlank() }?.let { return it }
         val token = sessionManager.getAccessToken()?.takeIf { it.isNotBlank() } ?: return null
         val parts = token.split('.')
         if (parts.size < 2) return null

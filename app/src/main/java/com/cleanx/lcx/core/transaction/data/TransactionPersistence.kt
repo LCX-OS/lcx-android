@@ -179,6 +179,7 @@ class TransactionPersistence @Inject constructor(
 
     private fun extractErrorCode(state: TransactionState): String? = when (state) {
         is TransactionState.TicketCreationFailed -> state.code
+        is TransactionState.PaymentFailed -> state.code
         else -> null
     }
 }

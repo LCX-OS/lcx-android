@@ -28,6 +28,14 @@ Validacion pre-release:
 ./gradlew test --console=plain
 ```
 
+Si el release incluye Android operativo con hardware, tambien corre el gate por ADB antes de subir el APK:
+
+```bash
+scripts/qa/android-hardware-e2e.sh --serial 49281FDAQ0011J --allow-real-charge --run-ticket-hardware-path
+```
+
+Evidencia fisica mas reciente: `docs/evidence/20260514/android-hardware-release-gate.md`.
+
 Validacion loyalty opcional, recomendada si el release toca `/v1/loyalty/*`:
 
 ```bash

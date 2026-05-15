@@ -39,6 +39,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -64,6 +65,7 @@ import com.cleanx.lcx.core.navigation.RouteAccess
 import com.cleanx.lcx.core.navigation.Screen
 import com.cleanx.lcx.core.theme.LcxSpacing
 import com.cleanx.lcx.core.transaction.ui.TransactionScreen
+import com.cleanx.lcx.core.ui.LcxTestTags
 import com.cleanx.lcx.feature.cash.ui.CashScreen
 import com.cleanx.lcx.feature.cash.ui.CashViewModel
 import com.cleanx.lcx.feature.checklist.ui.ChecklistScreen as FeatureChecklistScreen
@@ -72,6 +74,7 @@ import com.cleanx.lcx.feature.payments.ui.ChargeScreen
 import com.cleanx.lcx.feature.payments.ui.PaymentDiagnosticsScreen
 import com.cleanx.lcx.feature.printing.ui.PrintScreen
 import com.cleanx.lcx.feature.printing.ui.PrintViewModel
+import com.cleanx.lcx.feature.printing.ui.PrinterSettingsScreen
 import com.cleanx.lcx.feature.sales.ui.SalesScreen
 import com.cleanx.lcx.feature.sales.ui.SalesViewModel
 import com.cleanx.lcx.feature.tickets.ui.create.CreateTicketScreen
@@ -98,7 +101,6 @@ import com.cleanx.lcx.ui.ops.ShiftsControlShell
 import com.cleanx.lcx.ui.ops.ShiftsHistoryShell
 import com.cleanx.lcx.ui.ops.ShiftsReportsShell
 import com.cleanx.lcx.ui.ops.ShiftsScheduleShell
-import com.cleanx.lcx.ui.ops.SuppliesBrotherDebugShell
 import com.cleanx.lcx.ui.ops.SuppliesInventoryShell
 import com.cleanx.lcx.ui.ops.SuppliesLabelsShell
 import com.cleanx.lcx.ui.ops.SuppliesReportsShell
@@ -136,6 +138,8 @@ fun MainScaffold(
     val mainScaffoldViewModel: MainScaffoldViewModel = hiltViewModel(viewModelStoreOwner)
     val userRole by mainScaffoldViewModel.userRole.collectAsState()
     val userBadgeText by mainScaffoldViewModel.userBadgeText.collectAsState()
+    val userStatusText by mainScaffoldViewModel.userStatusText.collectAsState()
+    val userBranch by mainScaffoldViewModel.userBranch.collectAsState()
 
     val visibleTabs = remember(userRole) {
         BottomNavItem.entries.filter { RouteAccess.canAccessTab(userRole, it.graphRoute) }
@@ -187,6 +191,14 @@ fun MainScaffold(
                         style = MaterialTheme.typography.titleMedium,
                     )
                 }
+                if (!userBranch.isNullOrBlank()) {
+                    Text(
+                        text = userStatusText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = LcxSpacing.screenHorizontal),
+                    )
+                }
                 HorizontalDivider()
                 drawerItems.forEach { item ->
                     val selected = currentDestination?.hierarchy?.any {
@@ -205,7 +217,15 @@ fun MainScaffold(
                             }
                         },
                         colors = lcxNavigationDrawerItemColors(),
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp),
+                        modifier = Modifier
+                            .padding(horizontal = 12.dp, vertical = 2.dp)
+                            .testTag(
+                                if (item.target == Screen.MoreGraph) {
+                                    LcxTestTags.DRAWER_MORE
+                                } else {
+                                    LcxTestTags.drawerItem(item.label)
+                                },
+                            ),
                     )
                 }
                 HorizontalDivider(modifier = Modifier.padding(top = 8.dp))
@@ -273,6 +293,16 @@ fun MainScaffold(
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                     )
+                                    if (!userBranch.isNullOrBlank()) {
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = userBranch.orEmpty(),
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                    }
                                 }
                             }
                         },
@@ -308,6 +338,7 @@ fun MainScaffold(
                             },
                             label = { Text(item.label) },
                             colors = lcxNavigationBarItemColors(),
+                            modifier = Modifier.testTag(LcxTestTags.bottomNav(item.label)),
                         )
                     }
                 }
@@ -653,7 +684,7 @@ fun MainScaffold(
                         SuppliesReportsShell(onBack = { tabNavController.popBackStack() })
                     }
                     composable<Screen.SuppliesBrotherDebug> {
-                        SuppliesBrotherDebugShell(onBack = { tabNavController.popBackStack() })
+                        PrinterSettingsScreen(onBack = { tabNavController.popBackStack() })
                     }
                     composable<Screen.Vacations> {
                         VacationsShell(onBack = { tabNavController.popBackStack() })

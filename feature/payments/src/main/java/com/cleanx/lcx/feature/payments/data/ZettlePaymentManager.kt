@@ -18,6 +18,8 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withTimeout
 import timber.log.Timber
 
 @Singleton
@@ -25,6 +27,8 @@ class ZettlePaymentManager @Inject constructor(
     private val buildConfigProvider: BuildConfigProvider,
     private val activityLauncherBridge: ZettleActivityLauncherBridge,
 ) : PaymentManager {
+    private val paymentTimeoutMillis = DEFAULT_ZETTLE_PAYMENT_TIMEOUT_MS
+
     @Volatile
     private var initialized = false
 
@@ -120,20 +124,35 @@ class ZettlePaymentManager @Inject constructor(
             .put("LCX_REFERENCE", reference)
             .build()
 
-        return runCatching {
+        return try {
+            Timber.tag("PAYMENT").i(
+                "Launching Zettle payment: amount=%.2f minorUnits=%d reference=%s timeoutMs=%d",
+                amount,
+                amountMinorUnits,
+                reference,
+                paymentTimeoutMillis,
+            )
             val intent = CardReaderAction.Payment(
                 reference = transactionReference,
                 amount = amountMinorUnits,
             ).charge(hostActivity)
 
-            val activityResult = activityLauncherBridge.launch(intent)
+            val activityResult = withTimeout(paymentTimeoutMillis) {
+                activityLauncherBridge.launch(intent)
+            }
             if (activityResult.resultCode != Activity.RESULT_OK) {
-                return@runCatching PaymentResult.Cancelled(reference = reference)
+                Timber.tag("PAYMENT").w("Zettle payment cancelled by resultCode=%d reference=%s", activityResult.resultCode, reference)
+                return PaymentResult.Cancelled(reference = reference)
             }
 
             when (val result = activityResult.data?.zettleResult()) {
                 is ZettleResult.Completed<*> -> {
                     val payment: CardPaymentResult.Completed = CardReaderAction.fromPaymentResult(result)
+                    Timber.tag("PAYMENT").i(
+                        "Zettle payment completed transactionId=%s reference=%s",
+                        payment.payload.transactionId,
+                        reference,
+                    )
                     PaymentResult.Success(
                         transactionId = payment.payload.transactionId ?: reference,
                         amount = payment.payload.amount.toMajorUnits(),
@@ -141,20 +160,47 @@ class ZettlePaymentManager @Inject constructor(
                     )
                 }
 
-                is ZettleResult.Cancelled -> PaymentResult.Cancelled(reference = reference)
-                is ZettleResult.Failed -> PaymentResult.Failed(
-                    errorCode = "ZETTLE_${result.reason.javaClass.simpleName.uppercase()}",
-                    message = "Zettle rechazo el cobro: ${result.reason.javaClass.simpleName}",
-                    reference = reference,
-                )
+                is ZettleResult.Cancelled -> {
+                    Timber.tag("PAYMENT").w("Zettle payment cancelled reference=%s", reference)
+                    PaymentResult.Cancelled(reference = reference)
+                }
 
-                null -> PaymentResult.Failed(
-                    errorCode = "ZETTLE_EMPTY_RESULT",
-                    message = "Zettle no devolvio un resultado de cobro.",
-                    reference = reference,
-                )
+                is ZettleResult.Failed -> {
+                    val reason = result.reason.javaClass.simpleName
+                    Timber.tag("PAYMENT").e("Zettle payment failed reason=%s reference=%s", reason, reference)
+                    PaymentResult.Failed(
+                        errorCode = "ZETTLE_${reason.uppercase()}",
+                        message = "Zettle rechazo el cobro: $reason",
+                        reference = reference,
+                    )
+                }
+
+                null -> {
+                    Timber.tag("PAYMENT").e("Zettle payment returned empty result reference=%s", reference)
+                    PaymentResult.Failed(
+                        errorCode = "ZETTLE_EMPTY_RESULT",
+                        message = "Zettle no devolvio un resultado de cobro.",
+                        reference = reference,
+                    )
+                }
             }
-        }.getOrElse { throwable ->
+        } catch (throwable: TimeoutCancellationException) {
+            activityLauncherBridge.cancelPending("Timeout esperando resultado de Zettle.")
+            activityLauncherBridge.bringHostActivityToFront()
+            Timber.tag("PAYMENT").e(
+                throwable,
+                "Zettle payment timed out reference=%s amount=%.2f timeoutMs=%d",
+                reference,
+                amount,
+                paymentTimeoutMillis,
+            )
+            PaymentResult.Failed(
+                errorCode = "ZETTLE_TIMEOUT",
+                message = "Zettle no devolvio resultado antes del timeout. " +
+                    "Verifica el cargo en Zettle antes de intentar de nuevo.",
+                reference = reference,
+            )
+        } catch (throwable: Throwable) {
             Timber.e(throwable, "Zettle payment request failed before completion")
             PaymentResult.Failed(
                 errorCode = "ZETTLE_REQUEST_EXCEPTION",
@@ -194,6 +240,18 @@ class ZettlePaymentManager @Inject constructor(
             )
         }
 
+        val redirectScheme = buildConfigProvider.zettleRedirectUrl.substringBefore("://", missingDelimiterValue = "")
+        if (redirectScheme != buildConfigProvider.applicationId) {
+            return ZettleReadiness(
+                isConfigValid = false,
+                canLaunchPayments = false,
+                errorCode = "ZETTLE_REDIRECT_URL_MISMATCH",
+                statusMessage =
+                    "El redirect URL de Zettle usa scheme `$redirectScheme`, " +
+                        "pero el APK actual requiere `${buildConfigProvider.applicationId}`.",
+            )
+        }
+
         if (activityLauncherBridge.currentActivity() == null) {
             return ZettleReadiness(
                 isConfigValid = true,
@@ -208,10 +266,13 @@ class ZettlePaymentManager @Inject constructor(
             canLaunchPayments = true,
             errorCode = "ZETTLE_READY",
             statusMessage =
-                "SDK real de Zettle listo. Verifica permisos de ubicacion y lector antes del smoke.",
+                "SDK real de Zettle listo para ${buildConfigProvider.applicationId}; " +
+                    "redirect ${buildConfigProvider.zettleRedirectUrl}.",
         )
     }
 }
+
+private const val DEFAULT_ZETTLE_PAYMENT_TIMEOUT_MS = 420_000L
 
 private data class ZettleReadiness(
     val isConfigValid: Boolean,

@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cleanx.lcx.feature.payments.data.ChargeResult
+import com.cleanx.lcx.feature.payments.data.PAYMENT_REQUIRES_RECONCILIATION_ERROR_CODE
 import com.cleanx.lcx.feature.payments.data.PaymentRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,6 +35,7 @@ sealed interface ChargePhase {
     data object Success : ChargePhase
     data object Cancelled : ChargePhase
     data object Failed : ChargePhase
+    data object RequiresReconciliation : ChargePhase
 
     /**
      * Critical: the card was charged but the backend PATCH failed.
@@ -90,10 +92,17 @@ class ChargeViewModel @Inject constructor(
                         errorMessage = null,
                     )
 
-                    is ChargeResult.ReaderFailed -> state.copy(
-                        phase = ChargePhase.Failed,
-                        errorMessage = result.message,
-                    )
+                    is ChargeResult.ReaderFailed -> {
+                        val phase = if (result.errorCode == PAYMENT_REQUIRES_RECONCILIATION_ERROR_CODE) {
+                            ChargePhase.RequiresReconciliation
+                        } else {
+                            ChargePhase.Failed
+                        }
+                        state.copy(
+                            phase = phase,
+                            errorMessage = result.message,
+                        )
+                    }
 
                     is ChargeResult.PaymentSucceededButApiCallFailed -> state.copy(
                         phase = ChargePhase.PaymentSucceededApiCallFailed,
@@ -114,6 +123,7 @@ class ChargeViewModel @Inject constructor(
         val snapshot = _uiState.value
         when (snapshot.phase) {
             is ChargePhase.PaymentSucceededApiCallFailed -> retryApiSync(snapshot)
+            is ChargePhase.RequiresReconciliation -> Unit
             else -> startCharge()
         }
     }
@@ -156,7 +166,11 @@ class ChargeViewModel @Inject constructor(
                     )
 
                     is ChargeResult.ReaderFailed -> state.copy(
-                        phase = ChargePhase.Failed,
+                        phase = if (result.errorCode == PAYMENT_REQUIRES_RECONCILIATION_ERROR_CODE) {
+                            ChargePhase.RequiresReconciliation
+                        } else {
+                            ChargePhase.Failed
+                        },
                         errorMessage = result.message,
                     )
                 }

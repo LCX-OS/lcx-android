@@ -159,6 +159,40 @@ Uso:
 
 Si el AAR no existe, `dev` puede seguir compilando con fallback/stub. `prod` no.
 
+## Hardware E2E por ADB
+
+Suite nativa instrumentada para validar Android + backend local + hardware real.
+
+Estado QA conectado el 2026-05-14:
+
+- Telefono: Pixel 9, serial ADB `49281FDAQ0011J`, package `com.cleanx.app`.
+- Red del telefono: Wi-Fi `Rapips`, IP `192.168.100.14`; el runner no cambia Wi-Fi/datos durante Zettle.
+- ADB reverse: `3000`, `54321`, `8080`.
+- Backend local: `/Users/diegolden/Code/LCX-OS/lcx-pwa` por `127.0.0.1`.
+- Hardware: Zettle real disponible; Brother `QL-810W` detectada por Wi-Fi en `192.168.100.47`.
+
+Comando canonico:
+
+```bash
+set -a
+source /Users/diegolden/Code/LCX-OS/lcx-pwa/.env.local
+set +a
+
+LCX_ANDROID_APPLICATION_ID=com.cleanx.app \
+LCX_DEV_APPLICATION_ID_SUFFIX= \
+LCX_DEV_API_BASE_URL=http://127.0.0.1:3000 \
+LCX_DEV_SUPABASE_URL=http://127.0.0.1:54321 \
+LCX_DEV_PLATFORM_BASE_URL=http://127.0.0.1:8080 \
+LCX_DEV_USE_REAL_ZETTLE=true \
+LCX_DEV_USE_REAL_BROTHER=true \
+LCX_E2E_ZETTLE_NETWORK_MODE=wifi \
+scripts/qa/android-hardware-e2e.sh --serial 49281FDAQ0011J --allow-real-charge --run-ticket-hardware-path
+```
+
+El runner limpia `com.cleanx.app` solo al inicio del suite. Entre las clases Zettle y ticket conserva datos/proceso para no borrar la sesion OAuth del SDK.
+
+Evidencia vigente: `docs/evidence/20260514/android-hardware-release-gate.md`.
+
 ## Comandos importantes
 
 ```bash
@@ -227,7 +261,7 @@ La evidencia viva queda en `docs/evidence/`; los reportes narrativos fechados qu
 
 - [ ] `./gradlew :app:assembleDevDebug` y/o variante objetivo sin errores.
 - [ ] `./gradlew test` en verde (al menos modulos tocados).
-- [ ] QA fisico P0 actualizado con evidencia de logs/comandos.
+- [ ] Hardware E2E por ADB actualizado con evidencia de Zettle real, Brother real y ticket hardware path.
 - [ ] Contratos criticos de tickets sin drift contra `docs/api-contract-spec.md`.
 - [ ] Verificacion de flags hardware por ambiente (`USE_REAL_*`).
 - [ ] Gate de parity/porting actualizado en `docs/porting/native-feature-gate.md` y/o `docs/porting/route-registry.json`.

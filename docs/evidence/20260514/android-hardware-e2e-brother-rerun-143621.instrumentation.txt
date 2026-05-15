@@ -1,0 +1,47 @@
+INSTRUMENTATION_STATUS: class=com.cleanx.lcx.e2e.RealBrotherPrintE2eTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=
+com.cleanx.lcx.e2e.RealBrotherPrintE2eTest:
+INSTRUMENTATION_STATUS: test=brother_settings_discovers_connects_and_prints_test_label
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=com.cleanx.lcx.e2e.RealBrotherPrintE2eTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stack=androidx.compose.ui.test.ComposeTimeoutException: Condition still not satisfied after 90000 ms
+	at androidx.compose.ui.test.AndroidComposeUiTestEnvironment$AndroidComposeUiTestImpl.waitUntil(ComposeUiTest.android.kt:755)
+	at androidx.compose.ui.test.junit4.AndroidComposeTestRule.waitUntil(AndroidComposeTestRule.android.kt:362)
+	at com.cleanx.lcx.e2e.HardwareE2eRobot.waitForLoginOrAuthenticated(HardwareE2eTest.kt:383)
+	at com.cleanx.lcx.e2e.HardwareE2eRobot.ensureLoggedIn(HardwareE2eTest.kt:202)
+	at com.cleanx.lcx.e2e.RealBrotherPrintE2eTest.brother_settings_discovers_connects_and_prints_test_label(HardwareE2eTest.kt:151)
+
+INSTRUMENTATION_STATUS: stream=
+Error in brother_settings_discovers_connects_and_prints_test_label(com.cleanx.lcx.e2e.RealBrotherPrintE2eTest):
+androidx.compose.ui.test.ComposeTimeoutException: Condition still not satisfied after 90000 ms
+	at androidx.compose.ui.test.AndroidComposeUiTestEnvironment$AndroidComposeUiTestImpl.waitUntil(ComposeUiTest.android.kt:755)
+	at androidx.compose.ui.test.junit4.AndroidComposeTestRule.waitUntil(AndroidComposeTestRule.android.kt:362)
+	at com.cleanx.lcx.e2e.HardwareE2eRobot.waitForLoginOrAuthenticated(HardwareE2eTest.kt:383)
+	at com.cleanx.lcx.e2e.HardwareE2eRobot.ensureLoggedIn(HardwareE2eTest.kt:202)
+	at com.cleanx.lcx.e2e.RealBrotherPrintE2eTest.brother_settings_discovers_connects_and_prints_test_label(HardwareE2eTest.kt:151)
+
+INSTRUMENTATION_STATUS: test=brother_settings_discovers_connects_and_prints_test_label
+INSTRUMENTATION_STATUS_CODE: -2
+INSTRUMENTATION_RESULT: stream=
+
+Time: 91.504
+There was 1 failure:
+1) brother_settings_discovers_connects_and_prints_test_label(com.cleanx.lcx.e2e.RealBrotherPrintE2eTest)
+androidx.compose.ui.test.ComposeTimeoutException: Condition still not satisfied after 90000 ms
+	at androidx.compose.ui.test.AndroidComposeUiTestEnvironment$AndroidComposeUiTestImpl.waitUntil(ComposeUiTest.android.kt:755)
+	at androidx.compose.ui.test.junit4.AndroidComposeTestRule.waitUntil(AndroidComposeTestRule.android.kt:362)
+	at com.cleanx.lcx.e2e.HardwareE2eRobot.waitForLoginOrAuthenticated(HardwareE2eTest.kt:383)
+	at com.cleanx.lcx.e2e.HardwareE2eRobot.ensureLoggedIn(HardwareE2eTest.kt:202)
+	at com.cleanx.lcx.e2e.RealBrotherPrintE2eTest.brother_settings_discovers_connects_and_prints_test_label(HardwareE2eTest.kt:151)
+
+FAILURES!!!
+Tests run: 1,  Failures: 1
+
+
+INSTRUMENTATION_CODE: -1

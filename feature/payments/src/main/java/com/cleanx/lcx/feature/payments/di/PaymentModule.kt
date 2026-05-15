@@ -1,7 +1,9 @@
 package com.cleanx.lcx.feature.payments.di
 
 import com.cleanx.lcx.core.config.FeatureFlags
+import com.cleanx.lcx.feature.payments.data.PaymentAttemptStore
 import com.cleanx.lcx.feature.payments.data.PaymentManager
+import com.cleanx.lcx.feature.payments.data.SharedPreferencesPaymentAttemptStore
 import com.cleanx.lcx.feature.payments.data.StubPaymentManager
 import com.cleanx.lcx.feature.payments.data.ZettlePaymentManager
 import dagger.Module
@@ -21,6 +23,12 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object PaymentModule {
+
+    @Provides
+    @Singleton
+    fun providePaymentAttemptStore(
+        sharedPreferencesPaymentAttemptStore: SharedPreferencesPaymentAttemptStore,
+    ): PaymentAttemptStore = sharedPreferencesPaymentAttemptStore
 
     @Provides
     @Singleton

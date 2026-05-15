@@ -37,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
@@ -51,6 +52,7 @@ import com.cleanx.lcx.core.theme.LcxSpacing
 import com.cleanx.lcx.core.theme.LcxSuccess
 import com.cleanx.lcx.core.ui.ButtonVariant
 import com.cleanx.lcx.core.ui.LcxButton
+import com.cleanx.lcx.core.ui.LcxTestTags
 import com.cleanx.lcx.core.ui.LoadingOverlay
 import com.cleanx.lcx.feature.printing.data.ConnectionType
 import com.cleanx.lcx.feature.printing.data.LabelData
@@ -112,7 +114,11 @@ fun PrintScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .testTag(LcxTestTags.PRINT_ROOT),
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -272,7 +278,9 @@ private fun LabelSetupContent(
         LcxButton(
             text = if (totalBags == 1) "Imprimir 1 etiqueta" else "Imprimir $totalBags etiquetas",
             onClick = onPrint,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag(LcxTestTags.PRINT_START_BUTTON),
         )
         LcxButton(
             text = "Omitir impresion",
@@ -322,6 +330,7 @@ private fun PrinterCard(printer: PrinterInfo, onClick: () -> Unit) {
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
+            .testTag(LcxTestTags.PRINTER_CARD)
             .defaultMinSize(minHeight = 48.dp),
     ) {
         Column(modifier = Modifier.padding(LcxSpacing.md)) {
@@ -344,7 +353,7 @@ private fun SuccessContent(
     labelCount: Int,
     onDone: () -> Unit,
 ) {
-    CenteredColumn {
+    CenteredColumn(modifier = Modifier.testTag(LcxTestTags.PRINT_SUCCESS_ROOT)) {
         // Animated checkmark with scale-in effect
         var visible by remember { mutableStateOf(false) }
         LaunchedEffect(Unit) { visible = true }
@@ -407,9 +416,12 @@ private fun ErrorContent(
 }
 
 @Composable
-private fun CenteredColumn(content: @Composable () -> Unit) {
+private fun CenteredColumn(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {

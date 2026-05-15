@@ -20,6 +20,7 @@ class PaymentRepositoryTest {
 
     private lateinit var paymentManager: PaymentManager
     private lateinit var ticketRepository: TicketRepository
+    private lateinit var paymentAttemptStore: FakePaymentAttemptStore
     private lateinit var paymentRepository: PaymentRepository
 
     private val ticketId = "ticket-123"
@@ -44,7 +45,8 @@ class PaymentRepositoryTest {
     fun setUp() {
         paymentManager = mockk()
         ticketRepository = mockk()
-        paymentRepository = PaymentRepository(paymentManager, ticketRepository)
+        paymentAttemptStore = FakePaymentAttemptStore()
+        paymentRepository = PaymentRepository(paymentManager, ticketRepository, paymentAttemptStore)
     }
 
     // -- Success flow: payment succeeds -> API update succeeds --
@@ -69,6 +71,7 @@ class PaymentRepositoryTest {
         val success = result as ChargeResult.Success
         assertEquals(transactionId, success.transactionId)
         assertEquals(ticketId, success.ticket.id)
+        assertEquals(null, paymentAttemptStore.get(ticketId))
 
         coVerify(exactly = 1) {
             ticketRepository.updatePayment(any(), any(), any(), any())
@@ -86,6 +89,7 @@ class PaymentRepositoryTest {
 
         assertTrue(result is ChargeResult.Cancelled)
         assertEquals(ticketId, (result as ChargeResult.Cancelled).reference)
+        assertEquals(null, paymentAttemptStore.get(ticketId))
 
         // CRITICAL: no API call should have been made.
         coVerify(exactly = 0) {
@@ -106,6 +110,7 @@ class PaymentRepositoryTest {
         val failed = result as ChargeResult.ReaderFailed
         assertEquals("NETWORK", failed.errorCode)
         assertEquals("Error de red", failed.message)
+        assertEquals(null, paymentAttemptStore.get(ticketId))
 
         // CRITICAL: no API call should have been made.
         coVerify(exactly = 0) {
@@ -139,12 +144,41 @@ class PaymentRepositoryTest {
         assertEquals(transactionId, apiFailure.transactionId)
         assertEquals(amount, apiFailure.amount, 0.001)
         assertEquals("Internal Server Error", apiFailure.apiErrorMessage)
+        assertEquals(PaymentAttemptStatus.BACKEND_SYNC_FAILED, paymentAttemptStore.get(ticketId)?.status)
+    }
+
+    @Test
+    fun `charge blocks reader when payment attempt is already in progress`() = runTest {
+        paymentAttemptStore.begin(ticketId, amount, ticketId)
+
+        val result = paymentRepository.charge(ticketId, amount)
+
+        assertTrue(result is ChargeResult.ReaderFailed)
+        val failed = result as ChargeResult.ReaderFailed
+        assertEquals(PAYMENT_REQUIRES_RECONCILIATION_ERROR_CODE, failed.errorCode)
+        coVerify(exactly = 0) { paymentManager.requestPayment(any(), any()) }
+        coVerify(exactly = 0) { ticketRepository.updatePayment(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `charge marks attempt as requires reconciliation when Zettle times out`() = runTest {
+        coEvery { paymentManager.requestPayment(amount, ticketId) } returns
+            PaymentResult.Failed("ZETTLE_TIMEOUT", "Timeout esperando resultado", ticketId)
+
+        val result = paymentRepository.charge(ticketId, amount)
+
+        assertTrue(result is ChargeResult.ReaderFailed)
+        val failed = result as ChargeResult.ReaderFailed
+        assertEquals(PAYMENT_REQUIRES_RECONCILIATION_ERROR_CODE, failed.errorCode)
+        assertEquals(PaymentAttemptStatus.REQUIRES_RECONCILIATION, paymentAttemptStore.get(ticketId)?.status)
+        coVerify(exactly = 0) { ticketRepository.updatePayment(any(), any(), any(), any()) }
     }
 
     // -- syncPaymentToBackend standalone retry --
 
     @Test
     fun `syncPaymentToBackend returns Success when API call succeeds`() = runTest {
+        paymentAttemptStore.begin(ticketId, amount, ticketId)
         coEvery {
             ticketRepository.updatePayment(
                 ticketId = ticketId,
@@ -158,6 +192,7 @@ class PaymentRepositoryTest {
 
         assertTrue(result is ChargeResult.Success)
         assertEquals(transactionId, (result as ChargeResult.Success).transactionId)
+        assertEquals(null, paymentAttemptStore.get(ticketId))
     }
 
     @Test
@@ -202,5 +237,75 @@ class PaymentRepositoryTest {
                 paidAmount = amount,
             )
         }
+    }
+}
+
+private class FakePaymentAttemptStore : PaymentAttemptStore {
+    private val attempts = mutableMapOf<String, PaymentAttempt>()
+
+    override fun get(ticketId: String): PaymentAttempt? = attempts[ticketId]
+
+    override fun begin(
+        ticketId: String,
+        amount: Double,
+        reference: String,
+    ): BeginPaymentAttemptResult {
+        val existing = attempts[ticketId]
+        if (existing != null) return BeginPaymentAttemptResult.Blocked(existing)
+        val attempt = PaymentAttempt(
+            ticketId = ticketId,
+            amount = amount,
+            reference = reference,
+            status = PaymentAttemptStatus.PAYMENT_IN_PROGRESS,
+            createdAtMillis = 1_000L,
+        )
+        attempts[ticketId] = attempt
+        return BeginPaymentAttemptResult.Started(attempt)
+    }
+
+    override fun markBackendSyncFailed(
+        ticketId: String,
+        amount: Double,
+        reference: String,
+        transactionId: String,
+        reason: String,
+    ): Boolean {
+        val existing = attempts[ticketId]
+        if (existing != null && existing.reference != reference) return false
+        attempts[ticketId] = existing?.copy(
+            status = PaymentAttemptStatus.BACKEND_SYNC_FAILED,
+            transactionId = transactionId,
+            reason = reason,
+        ) ?: PaymentAttempt(
+            ticketId = ticketId,
+            amount = amount,
+            reference = reference,
+            status = PaymentAttemptStatus.BACKEND_SYNC_FAILED,
+            createdAtMillis = 1_000L,
+            transactionId = transactionId,
+            reason = reason,
+        )
+        return true
+    }
+
+    override fun markRequiresReconciliation(
+        ticketId: String,
+        reference: String,
+        reason: String,
+    ): Boolean {
+        val existing = attempts[ticketId] ?: return false
+        if (existing.reference != reference) return false
+        attempts[ticketId] = existing.copy(
+            status = PaymentAttemptStatus.REQUIRES_RECONCILIATION,
+            reason = reason,
+        )
+        return true
+    }
+
+    override fun clear(ticketId: String, reference: String): Boolean {
+        val existing = attempts[ticketId] ?: return true
+        if (existing.reference != reference) return false
+        attempts.remove(ticketId)
+        return true
     }
 }

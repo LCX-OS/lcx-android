@@ -43,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
@@ -60,6 +61,7 @@ import com.cleanx.lcx.core.ui.ErrorState
 import com.cleanx.lcx.core.ui.LcxButton
 import com.cleanx.lcx.core.ui.LcxCard
 import com.cleanx.lcx.core.ui.LcxStickyActionBar
+import com.cleanx.lcx.core.ui.LcxTestTags
 import com.cleanx.lcx.core.ui.LcxTextField
 import com.cleanx.lcx.core.ui.PaymentStatusChip
 import com.cleanx.lcx.core.ui.StatusChip
@@ -148,6 +150,7 @@ fun TicketDetailScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
+                        .testTag(LcxTestTags.TICKET_DETAIL_ROOT)
                         .padding(padding)
                         .padding(horizontal = LcxSpacing.md)
                         .verticalScroll(rememberScrollState()),
@@ -322,7 +325,9 @@ fun TicketDetailScreen(
                     LcxButton(
                         text = "Imprimir",
                         onClick = { onPrint(ticket.id) },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag(LcxTestTags.TICKET_DETAIL_PRINT_BUTTON),
                         enabled = !state.isLoading,
                         variant = ButtonVariant.Secondary,
                     )
@@ -366,7 +371,9 @@ private fun QuickActionsLaunchCard(
         LcxButton(
             text = "Imprimir etiquetas",
             onClick = onPrint,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag(LcxTestTags.TICKET_DETAIL_PRINT_BUTTON),
             enabled = !isLoading,
             variant = ButtonVariant.Secondary,
         )
@@ -383,7 +390,9 @@ private fun QuickActionsLaunchCard(
             LcxButton(
                 text = "Cobrar (Zettle)",
                 onClick = onCharge,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(LcxTestTags.TICKET_DETAIL_QUICK_CHARGE_BUTTON),
                 enabled = !isLoading,
                 variant = ButtonVariant.Secondary,
             )
@@ -434,7 +443,9 @@ private fun QuickActionBar(
             LcxButton(
                 text = "Cobrar",
                 onClick = onCharge,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag(LcxTestTags.TICKET_DETAIL_CHARGE_BUTTON),
                 enabled = !isLoading,
                 variant = if (canAdvance) ButtonVariant.Secondary else ButtonVariant.Primary,
             )

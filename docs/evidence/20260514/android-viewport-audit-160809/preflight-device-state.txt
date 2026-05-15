@@ -1,0 +1,13 @@
+serial=49281FDAQ0011J
+Thu May 14 16:08:39 CST 2026
+List of devices attached
+49281FDAQ0011J         device usb:1-1 product:tokay model:Pixel_9 device:tokay transport_id:5
+
+package_path=package:/data/app/~~_MN0gH1nyT9ROwUkJ0byBA==/com.cleanx.app-x0KH6ovNA1ZLuwp_62hMAw==/base.apk
+font_scale=1.0
+accelerometer_rotation=0
+user_rotation=0
+wm_size=Physical size: 1080x2424
+wm_density=Physical density: 420
+uimode=Night mode: auto
+reverse_list_before=

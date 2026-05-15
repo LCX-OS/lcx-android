@@ -23,10 +23,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.cleanx.lcx.core.ui.LcxTestTags
 import com.cleanx.lcx.feature.payments.data.PaymentBackendType
 
 /**
@@ -48,6 +50,7 @@ fun PaymentDiagnosticsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .testTag(LcxTestTags.PAYMENT_DIAGNOSTICS_ROOT)
             .verticalScroll(rememberScrollState())
             .padding(24.dp),
     ) {
@@ -163,7 +166,9 @@ fun PaymentDiagnosticsScreen(
 
         Button(
             onClick = { viewModel.triggerTestPayment() },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag(LcxTestTags.PAYMENT_DIAGNOSTICS_CHARGE_BUTTON),
             enabled = !state.isProcessing && state.canAcceptPayments && state.isInitialized,
         ) {
             if (state.isProcessing) {
@@ -194,7 +199,9 @@ fun PaymentDiagnosticsScreen(
         if (state.lastResult != null) {
             Spacer(Modifier.height(16.dp))
             Card(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(LcxTestTags.PAYMENT_DIAGNOSTICS_LAST_RESULT),
                 colors = CardDefaults.cardColors(
                     containerColor = when {
                         state.lastResult.startsWith("Exito") -> MaterialTheme.colorScheme.secondaryContainer

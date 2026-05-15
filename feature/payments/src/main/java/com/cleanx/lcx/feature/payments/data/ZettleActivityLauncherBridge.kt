@@ -9,6 +9,7 @@ import javax.inject.Singleton
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.CancellableContinuation
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -46,6 +47,23 @@ class ZettleActivityLauncherBridge @Inject constructor() {
     }
 
     fun currentActivity(): ComponentActivity? = activityRef?.get()
+
+    fun cancelPending(cause: String) {
+        pendingContinuation?.let { continuation ->
+            pendingContinuation = null
+            continuation.cancel(CancellationException(cause))
+        }
+    }
+
+    fun bringHostActivityToFront() {
+        val activity = currentActivity() ?: return
+        activity.runOnUiThread {
+            val intent = Intent(activity, activity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            }
+            activity.startActivity(intent)
+        }
+    }
 
     suspend fun launch(intent: Intent): ExternalActivityResult = launchMutex.withLock {
         val currentLauncher = launcher

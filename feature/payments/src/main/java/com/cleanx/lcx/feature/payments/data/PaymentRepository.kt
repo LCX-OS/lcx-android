@@ -54,6 +54,7 @@ sealed interface ChargeResult {
 class PaymentRepository @Inject constructor(
     private val paymentManager: PaymentManager,
     private val ticketRepository: TicketRepository,
+    private val paymentAttemptStore: PaymentAttemptStore,
 ) {
 
     /**
@@ -64,6 +65,38 @@ class PaymentRepository @Inject constructor(
      */
     suspend fun charge(ticketId: String, amount: Double): ChargeResult {
         Timber.tag("PAYMENT").i("Starting charge: amount=%.2f, reference=%s", amount, ticketId)
+        val attempt = when (
+            val beginResult = paymentAttemptStore.begin(
+                ticketId = ticketId,
+                amount = amount,
+                reference = ticketId,
+            )
+        ) {
+            is BeginPaymentAttemptResult.Started -> beginResult.attempt
+            is BeginPaymentAttemptResult.Blocked -> {
+                Timber.tag("PAYMENT").w(
+                    "Blocking charge because payment attempt already exists: ticketId=%s status=%s reference=%s",
+                    ticketId,
+                    beginResult.attempt.status,
+                    beginResult.attempt.reference,
+                )
+                return ChargeResult.ReaderFailed(
+                    errorCode = PAYMENT_REQUIRES_RECONCILIATION_ERROR_CODE,
+                    message = beginResult.attempt.toBlockedChargeMessage(),
+                )
+            }
+            is BeginPaymentAttemptResult.Failed -> {
+                Timber.tag("PAYMENT").e(
+                    "Blocking charge because payment attempt guard could not be persisted: ticketId=%s",
+                    ticketId,
+                )
+                return ChargeResult.ReaderFailed(
+                    errorCode = PAYMENT_REQUIRES_RECONCILIATION_ERROR_CODE,
+                    message = beginResult.message,
+                )
+            }
+        }
+
         // --- Step 1: card reader ---
         val paymentResult = paymentManager.requestPayment(
             amount = amount,
@@ -73,19 +106,54 @@ class PaymentRepository @Inject constructor(
         return when (paymentResult) {
             is PaymentResult.Cancelled -> {
                 Timber.tag("PAYMENT").i("Charge result: %s", "Cancelled")
+                paymentAttemptStore.clear(ticketId = ticketId, reference = attempt.reference)
                 ChargeResult.Cancelled(reference = ticketId)
             }
 
             is PaymentResult.Failed -> {
-                Timber.tag("PAYMENT").i("Charge result: %s", "Failed")
-                ChargeResult.ReaderFailed(
-                    errorCode = paymentResult.errorCode,
-                    message = paymentResult.message,
+                Timber.tag("PAYMENT").i(
+                    "Charge result: Failed code=%s reference=%s",
+                    paymentResult.errorCode,
+                    ticketId,
                 )
+                if (paymentResult.requiresReconciliation()) {
+                    val persisted = paymentAttemptStore.markRequiresReconciliation(
+                        ticketId = ticketId,
+                        reference = attempt.reference,
+                        reason = paymentResult.message,
+                    )
+                    if (!persisted) {
+                        Timber.tag("PAYMENT").e(
+                            "Failed to persist reconciliation guard for ticketId=%s reference=%s",
+                            ticketId,
+                            attempt.reference,
+                        )
+                    }
+                    ChargeResult.ReaderFailed(
+                        errorCode = PAYMENT_REQUIRES_RECONCILIATION_ERROR_CODE,
+                        message = if (persisted) {
+                            "Zettle no devolvio un resultado confiable para el ticket $ticketId. " +
+                                "No intentes cobrar de nuevo hasta conciliar este intento."
+                        } else {
+                            "Zettle no devolvio un resultado confiable y no se pudo guardar el bloqueo local. " +
+                                "No intentes cobrar de nuevo hasta conciliar este intento."
+                        },
+                    )
+                } else {
+                    paymentAttemptStore.clear(ticketId = ticketId, reference = attempt.reference)
+                    ChargeResult.ReaderFailed(
+                        errorCode = paymentResult.errorCode,
+                        message = paymentResult.message,
+                    )
+                }
             }
 
             is PaymentResult.Success -> {
-                Timber.tag("PAYMENT").i("Charge result: %s", "Success")
+                Timber.tag("PAYMENT").i(
+                    "Charge result: Success transactionId=%s reference=%s",
+                    paymentResult.transactionId,
+                    ticketId,
+                )
                 // --- Step 2: persist to backend ---
                 syncPaymentToBackend(
                     ticketId = ticketId,
@@ -115,6 +183,7 @@ class PaymentRepository @Inject constructor(
         return when (apiResult) {
             is ApiResult.Success -> {
                 Timber.tag("PAYMENT").i("Charge result: %s", "Success")
+                paymentAttemptStore.clear(ticketId = ticketId, reference = ticketId)
                 ChargeResult.Success(
                     ticket = apiResult.data,
                     transactionId = transactionId,
@@ -123,12 +192,45 @@ class PaymentRepository @Inject constructor(
 
             is ApiResult.Error -> {
                 Timber.tag("PAYMENT").w("Payment succeeded but API sync failed: %s", apiResult.message)
+                val persisted = paymentAttemptStore.markBackendSyncFailed(
+                    ticketId = ticketId,
+                    amount = amount,
+                    reference = ticketId,
+                    transactionId = transactionId,
+                    reason = apiResult.message,
+                )
+                if (!persisted) {
+                    Timber.tag("PAYMENT").e(
+                        "Failed to persist backend-sync-failed guard for ticketId=%s transactionId=%s",
+                        ticketId,
+                        transactionId,
+                    )
+                }
                 ChargeResult.PaymentSucceededButApiCallFailed(
                     transactionId = transactionId,
                     amount = amount,
-                    apiErrorMessage = apiResult.message,
+                    apiErrorMessage = if (persisted) {
+                        apiResult.message
+                    } else {
+                        "${apiResult.message} Ademas, no se pudo guardar el bloqueo local contra doble cobro."
+                    },
                 )
             }
         }
     }
+}
+
+private fun PaymentResult.Failed.requiresReconciliation(): Boolean =
+    errorCode == "ZETTLE_TIMEOUT" || errorCode == "ZETTLE_EMPTY_RESULT"
+
+private fun PaymentAttempt.toBlockedChargeMessage(): String = when (status) {
+    PaymentAttemptStatus.PAYMENT_IN_PROGRESS ->
+        "Ya existe un intento de cobro en progreso para este ticket. " +
+            "No se puede iniciar otro cargo hasta cancelar o conciliar el intento anterior."
+    PaymentAttemptStatus.BACKEND_SYNC_FAILED ->
+        "El cobro ya fue aprobado por Zettle, pero falta sincronizarlo con LCX. " +
+            "No se puede iniciar otro cargo; reintenta la sincronizacion o concilia el ticket."
+    PaymentAttemptStatus.REQUIRES_RECONCILIATION ->
+        "Este ticket requiere conciliacion antes de intentar otro cobro. " +
+            "Verifica Zettle con la referencia $reference."
 }

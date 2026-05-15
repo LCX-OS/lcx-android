@@ -35,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -50,6 +51,7 @@ import com.cleanx.lcx.core.ui.ErrorState
 import com.cleanx.lcx.core.ui.LcxActionCard
 import com.cleanx.lcx.core.ui.LcxCard
 import com.cleanx.lcx.core.ui.LcxStatusPill
+import com.cleanx.lcx.core.ui.LcxTestTags
 
 @Composable
 fun DashboardScreen(
@@ -134,6 +136,7 @@ private fun DashboardContent(
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
+            .testTag(LcxTestTags.DASHBOARD_ROOT)
             .padding(horizontal = LcxSpacing.screenHorizontal),
         contentPadding = PaddingValues(bottom = 128.dp),
         verticalArrangement = Arrangement.spacedBy(LcxSpacing.sm),

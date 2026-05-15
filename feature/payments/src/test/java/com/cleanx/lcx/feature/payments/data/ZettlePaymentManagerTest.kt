@@ -46,6 +46,24 @@ class ZettlePaymentManagerTest {
     }
 
     @Test
+    fun `capability blocks redirect URL scheme mismatch before launch`() {
+        val manager = ZettlePaymentManager(
+            buildConfig(
+                applicationId = "com.cleanx.app",
+                approvedApplicationId = "com.cleanx.app",
+                zettleRedirectUrl = "com.cleanx.other://oauth/callback",
+            ),
+            ZettleActivityLauncherBridge(),
+        )
+
+        val capability = manager.capability()
+
+        assertFalse(capability.canAcceptPayments)
+        assertTrue(capability.statusMessage.contains("com.cleanx.other"))
+        assertTrue(capability.statusMessage.contains("com.cleanx.app"))
+    }
+
+    @Test
     fun `initialize keeps sdk disabled when application id does not match`() = kotlinx.coroutines.test.runTest {
         val manager = ZettlePaymentManager(
             buildConfig(
@@ -63,6 +81,7 @@ class ZettlePaymentManagerTest {
     private fun buildConfig(
         applicationId: String,
         approvedApplicationId: String,
+        zettleRedirectUrl: String = "com.cleanx.app://oauth/callback",
     ): BuildConfigProvider = object : BuildConfigProvider {
         override val applicationId: String = applicationId
         override val apiBaseUrl: String = "http://localhost"
@@ -71,7 +90,7 @@ class ZettlePaymentManagerTest {
         override val supabaseUrl: String = "http://localhost"
         override val supabaseAnonKey: String = "anon"
         override val zettleClientId: String = "client-id"
-        override val zettleRedirectUrl: String = "com.cleanx.app://oauth/callback"
+        override val zettleRedirectUrl: String = zettleRedirectUrl
         override val zettleApprovedApplicationId: String = approvedApplicationId
         override val isDebug: Boolean = true
         override val useRealZettle: Boolean = true

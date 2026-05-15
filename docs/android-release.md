@@ -109,6 +109,44 @@ LCX_PLATFORM_BEARER_TOKEN="$LCX_PLATFORM_BEARER_TOKEN" \
 scripts/qa/loyalty-platform-smoke.sh
 ```
 
+### Hardware E2E release gate
+
+Antes de liberar un APK que toca pagos, tickets o impresion, valida el hardware real con el suite instrumentado por ADB:
+
+```bash
+set -a
+source /Users/diegolden/Code/LCX-OS/lcx-pwa/.env.local
+set +a
+
+LCX_ANDROID_APPLICATION_ID=com.cleanx.app \
+LCX_DEV_APPLICATION_ID_SUFFIX= \
+LCX_DEV_API_BASE_URL=http://127.0.0.1:3000 \
+LCX_DEV_SUPABASE_URL=http://127.0.0.1:54321 \
+LCX_DEV_PLATFORM_BASE_URL=http://127.0.0.1:8080 \
+LCX_DEV_USE_REAL_ZETTLE=true \
+LCX_DEV_USE_REAL_BROTHER=true \
+LCX_E2E_ZETTLE_NETWORK_MODE=wifi \
+scripts/qa/android-hardware-e2e.sh --serial 49281FDAQ0011J --allow-real-charge --run-ticket-hardware-path
+```
+
+Reglas del gate:
+
+- El telefono debe estar en una sola red estable preparada por QA; el runner no cambia `svc wifi/data`.
+- `pm clear com.cleanx.app` ocurre solo al inicio del suite para no borrar tokens OAuth de Zettle entre clases.
+- Si `RealZettleChargeE2eTest` falla, `TicketHardwarePathE2eTest` se omite para evitar doble cargo ciego.
+- `TicketHardwarePathE2eTest` requiere `--allow-real-charge --run-ticket-hardware-path` y ejecuta un cargo real.
+
+Estado validado el 2026-05-14:
+
+- Device: Pixel 9 `49281FDAQ0011J`, package `com.cleanx.app`.
+- Red: Wi-Fi `Rapips`, IP `192.168.100.14`, reverses `3000/54321/8080`.
+- Zettle: cargo diagnostico real `$1.00` PASS, `transactionId=03562d88-4fd3-11f1-a749-d60d5194c6b5`.
+- Brother: `QL-810W` descubierta en `192.168.100.47`; prueba aislada PASS.
+- Ticket path: `T-20260514-0011` PASS, cargo real `$1.00` con `transactionId=88b0628a-4fd6-11f1-ba99-9789d5b9f344`, backend `payment_status=paid`, impresion Brother exitosa.
+- Rollup de evidencia: `docs/evidence/20260514/android-hardware-release-gate.md`.
+
+Nota: la corrida completa `android-hardware-e2e-142158` fallo antes de los fixes finales de seleccion Brother y boton de cobro de ticket. Los escenarios bloqueantes quedaron verdes con reruns enfocados para evitar cargos extra; para firma formal se puede repetir el comando completo una sola vez.
+
 ## 5. Artefacto
 
 Genera el APK firmado:

@@ -40,6 +40,7 @@ sealed interface TransactionState {
     data class PaymentFailed(
         val ticket: Ticket,
         val message: String,
+        val code: String? = null,
     ) : TransactionState
 
     data class PaymentCancelled(val ticket: Ticket) : TransactionState

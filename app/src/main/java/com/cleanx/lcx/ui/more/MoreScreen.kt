@@ -35,11 +35,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.cleanx.lcx.BuildConfig
 import com.cleanx.lcx.core.model.UserRole
 import com.cleanx.lcx.core.navigation.RouteAccess
 import com.cleanx.lcx.core.navigation.Screen
+import com.cleanx.lcx.core.ui.LcxTestTags
 
 /**
  * Data class representing a single navigable item within the More hub.
@@ -110,7 +112,14 @@ internal fun buildSections(
                 add(MoreItem("Etiquetas", Icons.AutoMirrored.Filled.Label, Screen.SuppliesLabels))
                 add(MoreItem("Reportes", Icons.Filled.Summarize, Screen.SuppliesReports))
                 if (includePaymentDiagnostics) {
-                    add(MoreItem("Debug Brother", Icons.Filled.BugReport, Screen.SuppliesBrotherDebug))
+                    add(
+                        MoreItem(
+                            "Debug Brother",
+                            Icons.Filled.BugReport,
+                            Screen.SuppliesBrotherDebug,
+                            isAvailable = true,
+                        ),
+                    )
                 }
             },
         ),
@@ -190,7 +199,7 @@ fun MoreScreen(
     }
 
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.testTag(LcxTestTags.MORE_ROOT),
         topBar = {
             LcxTopAppBar(
                 title = { Text("Más") },
@@ -198,7 +207,9 @@ fun MoreScreen(
         },
     ) { innerPadding ->
         LazyColumn(
-            modifier = Modifier.padding(innerPadding),
+            modifier = Modifier
+                .padding(innerPadding)
+                .testTag(LcxTestTags.MORE_LIST),
             contentPadding = PaddingValues(bottom = 128.dp),
         ) {
             renderSectionGroup(
@@ -268,7 +279,9 @@ private fun androidx.compose.foundation.lazy.LazyListScope.renderSectionGroup(
                         contentDescription = item.label,
                     )
                 },
-                modifier = Modifier.clickable { onNavigate(item.screen) },
+                modifier = Modifier
+                    .testTag(LcxTestTags.moreItem(item.label))
+                    .clickable { onNavigate(item.screen) },
             )
         }
 

@@ -37,11 +37,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.cleanx.lcx.core.ui.LcxTestTags
 import com.cleanx.lcx.feature.printing.data.ConnectionType
 import com.cleanx.lcx.feature.printing.data.PrinterInfo
 
@@ -85,6 +87,7 @@ fun PrinterSettingsScreen(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
+            .testTag(LcxTestTags.PRINTER_SETTINGS_ROOT)
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
@@ -149,7 +152,9 @@ fun PrinterSettingsScreen(
                     }
                 },
                 enabled = !state.isDiscovering && !state.isConnecting,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(LcxTestTags.PRINTER_DISCOVER_BUTTON),
             ) {
                 if (state.isDiscovering) {
                     CircularProgressIndicator(
@@ -267,7 +272,9 @@ fun PrinterSettingsScreen(
             OutlinedButton(
                 onClick = viewModel::testPrint,
                 enabled = !state.isPrinting,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(LcxTestTags.PRINTER_TEST_PRINT_BUTTON),
             ) {
                 if (state.isPrinting) {
                     CircularProgressIndicator(
@@ -300,7 +307,9 @@ fun PrinterSettingsScreen(
             item {
                 Spacer(modifier = Modifier.height(8.dp))
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(LcxTestTags.PRINTER_STATUS_MESSAGE),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant,
                     ),
@@ -332,32 +341,40 @@ private fun DiscoveredPrinterCard(
     isConnecting: Boolean,
     onClick: () -> Unit,
 ) {
-    Card(
-        onClick = onClick,
-        enabled = !isConnecting,
-        modifier = Modifier.fillMaxWidth(),
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(LcxTestTags.PRINTER_CARD),
     ) {
-        Row(
+        Card(
+            onClick = onClick,
+            enabled = !isConnecting,
             modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+                .fillMaxWidth()
+                .testTag(LcxTestTags.printerCard(printer.name)),
         ) {
-            Column {
-                Text(
-                    text = printer.name,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
-                )
-                Text(
-                    text = "${printer.connectionType.name} - ${printer.address}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            if (isConnecting) {
-                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+            Row(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column {
+                    Text(
+                        text = printer.name,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    Text(
+                        text = "${printer.connectionType.name} - ${printer.address}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (isConnecting) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                }
             }
         }
     }

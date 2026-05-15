@@ -1,0 +1,44 @@
+INSTRUMENTATION_STATUS: class=com.cleanx.lcx.e2e.RealBrotherPrintE2eTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=
+com.cleanx.lcx.e2e.RealBrotherPrintE2eTest:
+INSTRUMENTATION_STATUS: test=brother_settings_discovers_connects_and_prints_test_label
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=com.cleanx.lcx.e2e.RealBrotherPrintE2eTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stack=java.lang.AssertionError: Timed out waiting for device text: QL-810W
+	at org.junit.Assert.fail(Assert.java:89)
+	at com.cleanx.lcx.e2e.HardwareE2eRobot.scrollAndClickDeviceText(HardwareE2eTest.kt:521)
+	at com.cleanx.lcx.e2e.HardwareE2eRobot.clickPrinterCard(HardwareE2eTest.kt:318)
+	at com.cleanx.lcx.e2e.RealBrotherPrintE2eTest.brother_settings_discovers_connects_and_prints_test_label(HardwareE2eTest.kt:154)
+
+INSTRUMENTATION_STATUS: stream=
+Error in brother_settings_discovers_connects_and_prints_test_label(com.cleanx.lcx.e2e.RealBrotherPrintE2eTest):
+java.lang.AssertionError: Timed out waiting for device text: QL-810W
+	at org.junit.Assert.fail(Assert.java:89)
+	at com.cleanx.lcx.e2e.HardwareE2eRobot.scrollAndClickDeviceText(HardwareE2eTest.kt:521)
+	at com.cleanx.lcx.e2e.HardwareE2eRobot.clickPrinterCard(HardwareE2eTest.kt:318)
+	at com.cleanx.lcx.e2e.RealBrotherPrintE2eTest.brother_settings_discovers_connects_and_prints_test_label(HardwareE2eTest.kt:154)
+
+INSTRUMENTATION_STATUS: test=brother_settings_discovers_connects_and_prints_test_label
+INSTRUMENTATION_STATUS_CODE: -2
+INSTRUMENTATION_RESULT: stream=
+
+Time: 184.621
+There was 1 failure:
+1) brother_settings_discovers_connects_and_prints_test_label(com.cleanx.lcx.e2e.RealBrotherPrintE2eTest)
+java.lang.AssertionError: Timed out waiting for device text: QL-810W
+	at org.junit.Assert.fail(Assert.java:89)
+	at com.cleanx.lcx.e2e.HardwareE2eRobot.scrollAndClickDeviceText(HardwareE2eTest.kt:521)
+	at com.cleanx.lcx.e2e.HardwareE2eRobot.clickPrinterCard(HardwareE2eTest.kt:318)
+	at com.cleanx.lcx.e2e.RealBrotherPrintE2eTest.brother_settings_discovers_connects_and_prints_test_label(HardwareE2eTest.kt:154)
+
+FAILURES!!!
+Tests run: 1,  Failures: 1
+
+
+INSTRUMENTATION_CODE: -1

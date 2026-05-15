@@ -9,6 +9,7 @@ import com.cleanx.lcx.core.transaction.TransactionPhase
 import com.cleanx.lcx.core.transaction.TransactionState
 import com.cleanx.lcx.core.transaction.data.SavedTransaction
 import com.cleanx.lcx.core.transaction.data.TransactionPersistence
+import com.cleanx.lcx.feature.payments.data.PAYMENT_REQUIRES_RECONCILIATION_ERROR_CODE
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -237,10 +238,14 @@ class TransactionViewModel @Inject constructor(
             is TransactionState.PaymentFailed -> TransactionUiState(
                 transactionState = state,
                 currentStep = 2,
-                stepLabel = "Error en el cobro",
+                stepLabel = if (state.code == PAYMENT_REQUIRES_RECONCILIATION_ERROR_CODE) {
+                    "Requiere conciliacion"
+                } else {
+                    "Error en el cobro"
+                },
                 ticket = state.ticket,
                 errorMessage = state.message,
-                canRetry = true,
+                canRetry = state.code != PAYMENT_REQUIRES_RECONCILIATION_ERROR_CODE,
                 canCancel = true,
             )
 

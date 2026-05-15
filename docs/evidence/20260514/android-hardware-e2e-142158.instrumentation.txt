@@ -1,0 +1,190 @@
+-- com.cleanx.lcx.e2e.PreflightHardwareE2eTest --
+INSTRUMENTATION_STATUS: class=com.cleanx.lcx.e2e.PreflightHardwareE2eTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=
+com.cleanx.lcx.e2e.PreflightHardwareE2eTest:
+INSTRUMENTATION_STATUS: test=preflight_asserts_prodLike_debug_build_and_payment_diagnostics
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=com.cleanx.lcx.e2e.PreflightHardwareE2eTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=preflight_asserts_prodLike_debug_build_and_payment_diagnostics
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_RESULT: stream=
+
+Time: 4.008
+
+OK (1 test)
+
+
+INSTRUMENTATION_CODE: -1
+-- com.cleanx.lcx.e2e.DeviceLoginE2eTest --
+INSTRUMENTATION_STATUS: class=com.cleanx.lcx.e2e.DeviceLoginE2eTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=
+com.cleanx.lcx.e2e.DeviceLoginE2eTest:
+INSTRUMENTATION_STATUS: test=login_with_seeded_branch_operator_and_pin_lands_on_dashboard
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=com.cleanx.lcx.e2e.DeviceLoginE2eTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=login_with_seeded_branch_operator_and_pin_lands_on_dashboard
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_RESULT: stream=
+
+Time: 1.905
+
+OK (1 test)
+
+
+INSTRUMENTATION_CODE: -1
+-- com.cleanx.lcx.e2e.CriticalOperatorSmokeE2eTest --
+INSTRUMENTATION_STATUS: class=com.cleanx.lcx.e2e.CriticalOperatorSmokeE2eTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=
+com.cleanx.lcx.e2e.CriticalOperatorSmokeE2eTest:
+INSTRUMENTATION_STATUS: test=operator_can_open_critical_modules_without_runtime_errors
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=com.cleanx.lcx.e2e.CriticalOperatorSmokeE2eTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=operator_can_open_critical_modules_without_runtime_errors
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_RESULT: stream=
+
+Time: 4.293
+
+OK (1 test)
+
+
+INSTRUMENTATION_CODE: -1
+-- com.cleanx.lcx.e2e.RealBrotherPrintE2eTest --
+INSTRUMENTATION_STATUS: class=com.cleanx.lcx.e2e.RealBrotherPrintE2eTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=
+com.cleanx.lcx.e2e.RealBrotherPrintE2eTest:
+INSTRUMENTATION_STATUS: test=brother_settings_discovers_connects_and_prints_test_label
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=com.cleanx.lcx.e2e.RealBrotherPrintE2eTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stack=androidx.compose.ui.test.ComposeTimeoutException: Condition still not satisfied after 90000 ms
+	at androidx.compose.ui.test.AndroidComposeUiTestEnvironment$AndroidComposeUiTestImpl.waitUntil(ComposeUiTest.android.kt:755)
+	at androidx.compose.ui.test.junit4.AndroidComposeTestRule.waitUntil(AndroidComposeTestRule.android.kt:362)
+	at com.cleanx.lcx.e2e.HardwareE2eRobot.waitForTag(HardwareE2eTest.kt:290)
+	at com.cleanx.lcx.e2e.HardwareE2eRobot.clickTag(HardwareE2eTest.kt:272)
+	at com.cleanx.lcx.e2e.RealBrotherPrintE2eTest.brother_settings_discovers_connects_and_prints_test_label(HardwareE2eTest.kt:151)
+
+INSTRUMENTATION_STATUS: stream=
+Error in brother_settings_discovers_connects_and_prints_test_label(com.cleanx.lcx.e2e.RealBrotherPrintE2eTest):
+androidx.compose.ui.test.ComposeTimeoutException: Condition still not satisfied after 90000 ms
+	at androidx.compose.ui.test.AndroidComposeUiTestEnvironment$AndroidComposeUiTestImpl.waitUntil(ComposeUiTest.android.kt:755)
+	at androidx.compose.ui.test.junit4.AndroidComposeTestRule.waitUntil(AndroidComposeTestRule.android.kt:362)
+	at com.cleanx.lcx.e2e.HardwareE2eRobot.waitForTag(HardwareE2eTest.kt:290)
+	at com.cleanx.lcx.e2e.HardwareE2eRobot.clickTag(HardwareE2eTest.kt:272)
+	at com.cleanx.lcx.e2e.RealBrotherPrintE2eTest.brother_settings_discovers_connects_and_prints_test_label(HardwareE2eTest.kt:151)
+
+INSTRUMENTATION_STATUS: test=brother_settings_discovers_connects_and_prints_test_label
+INSTRUMENTATION_STATUS_CODE: -2
+INSTRUMENTATION_RESULT: stream=
+
+Time: 92.693
+There was 1 failure:
+1) brother_settings_discovers_connects_and_prints_test_label(com.cleanx.lcx.e2e.RealBrotherPrintE2eTest)
+androidx.compose.ui.test.ComposeTimeoutException: Condition still not satisfied after 90000 ms
+	at androidx.compose.ui.test.AndroidComposeUiTestEnvironment$AndroidComposeUiTestImpl.waitUntil(ComposeUiTest.android.kt:755)
+	at androidx.compose.ui.test.junit4.AndroidComposeTestRule.waitUntil(AndroidComposeTestRule.android.kt:362)
+	at com.cleanx.lcx.e2e.HardwareE2eRobot.waitForTag(HardwareE2eTest.kt:290)
+	at com.cleanx.lcx.e2e.HardwareE2eRobot.clickTag(HardwareE2eTest.kt:272)
+	at com.cleanx.lcx.e2e.RealBrotherPrintE2eTest.brother_settings_discovers_connects_and_prints_test_label(HardwareE2eTest.kt:151)
+
+FAILURES!!!
+Tests run: 1,  Failures: 1
+
+
+INSTRUMENTATION_CODE: -1
+-- com.cleanx.lcx.e2e.RealZettleChargeE2eTest --
+INSTRUMENTATION_STATUS: class=com.cleanx.lcx.e2e.RealZettleChargeE2eTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=
+com.cleanx.lcx.e2e.RealZettleChargeE2eTest:
+INSTRUMENTATION_STATUS: test=diagnostics_runs_real_one_peso_zettle_charge
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=com.cleanx.lcx.e2e.RealZettleChargeE2eTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=diagnostics_runs_real_one_peso_zettle_charge
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_RESULT: stream=
+
+Time: 82.31
+
+OK (1 test)
+
+
+INSTRUMENTATION_CODE: -1
+-- com.cleanx.lcx.e2e.TicketHardwarePathE2eTest --
+Preserving app process and data for ticket path to reuse Zettle session
+INSTRUMENTATION_STATUS: class=com.cleanx.lcx.e2e.TicketHardwarePathE2eTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=
+com.cleanx.lcx.e2e.TicketHardwarePathE2eTest:
+INSTRUMENTATION_STATUS: test=seeded_ticket_can_be_charged_and_printed_through_app_ui
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=com.cleanx.lcx.e2e.TicketHardwarePathE2eTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stack=androidx.compose.ui.test.ComposeTimeoutException: Condition still not satisfied after 90000 ms
+	at androidx.compose.ui.test.AndroidComposeUiTestEnvironment$AndroidComposeUiTestImpl.waitUntil(ComposeUiTest.android.kt:755)
+	at androidx.compose.ui.test.junit4.AndroidComposeTestRule.waitUntil(AndroidComposeTestRule.android.kt:362)
+	at com.cleanx.lcx.e2e.HardwareE2eRobot.waitForTag(HardwareE2eTest.kt:290)
+	at com.cleanx.lcx.e2e.TicketHardwarePathE2eTest.seeded_ticket_can_be_charged_and_printed_through_app_ui(HardwareE2eTest.kt:179)
+
+INSTRUMENTATION_STATUS: stream=
+Error in seeded_ticket_can_be_charged_and_printed_through_app_ui(com.cleanx.lcx.e2e.TicketHardwarePathE2eTest):
+androidx.compose.ui.test.ComposeTimeoutException: Condition still not satisfied after 90000 ms
+	at androidx.compose.ui.test.AndroidComposeUiTestEnvironment$AndroidComposeUiTestImpl.waitUntil(ComposeUiTest.android.kt:755)
+	at androidx.compose.ui.test.junit4.AndroidComposeTestRule.waitUntil(AndroidComposeTestRule.android.kt:362)
+	at com.cleanx.lcx.e2e.HardwareE2eRobot.waitForTag(HardwareE2eTest.kt:290)
+	at com.cleanx.lcx.e2e.TicketHardwarePathE2eTest.seeded_ticket_can_be_charged_and_printed_through_app_ui(HardwareE2eTest.kt:179)
+
+INSTRUMENTATION_STATUS: test=seeded_ticket_can_be_charged_and_printed_through_app_ui
+INSTRUMENTATION_STATUS_CODE: -2
+INSTRUMENTATION_RESULT: stream=
+
+Time: 93.794
+There was 1 failure:
+1) seeded_ticket_can_be_charged_and_printed_through_app_ui(com.cleanx.lcx.e2e.TicketHardwarePathE2eTest)
+androidx.compose.ui.test.ComposeTimeoutException: Condition still not satisfied after 90000 ms
+	at androidx.compose.ui.test.AndroidComposeUiTestEnvironment$AndroidComposeUiTestImpl.waitUntil(ComposeUiTest.android.kt:755)
+	at androidx.compose.ui.test.junit4.AndroidComposeTestRule.waitUntil(AndroidComposeTestRule.android.kt:362)
+	at com.cleanx.lcx.e2e.HardwareE2eRobot.waitForTag(HardwareE2eTest.kt:290)
+	at com.cleanx.lcx.e2e.TicketHardwarePathE2eTest.seeded_ticket_can_be_charged_and_printed_through_app_ui(HardwareE2eTest.kt:179)
+
+FAILURES!!!
+Tests run: 1,  Failures: 1
+
+
+INSTRUMENTATION_CODE: -1

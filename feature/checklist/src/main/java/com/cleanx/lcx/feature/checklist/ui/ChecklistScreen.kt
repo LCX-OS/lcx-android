@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -44,6 +45,7 @@ import com.cleanx.lcx.core.theme.LcxSpacing
 import com.cleanx.lcx.core.ui.EmptyState
 import com.cleanx.lcx.core.ui.ErrorState
 import com.cleanx.lcx.core.ui.LcxCard
+import com.cleanx.lcx.core.ui.LcxTestTags
 import com.cleanx.lcx.feature.checklist.data.Checklist
 import com.cleanx.lcx.feature.checklist.data.ChecklistType
 import com.cleanx.lcx.feature.checklist.data.resolvedType
@@ -107,6 +109,7 @@ fun ChecklistScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .testTag(LcxTestTags.CHECKLIST_ROOT)
                 .padding(padding),
         ) {
             // Tabs

@@ -33,6 +33,16 @@ fun readConfig(
     return readOptionalConfig(propertyName, envName) ?: defaultValue
 }
 
+fun readConfigAllowEmpty(
+    propertyName: String,
+    envName: String,
+    defaultValue: String,
+): String {
+    providers.gradleProperty(propertyName).orNull?.trim()?.let { return it }
+    System.getenv(envName)?.trim()?.let { return it }
+    return defaultValue
+}
+
 fun readBooleanConfig(
     propertyName: String,
     envName: String,
@@ -206,7 +216,7 @@ val androidApplicationId = readConfig(
     envName = "LCX_ANDROID_APPLICATION_ID",
     defaultValue = "com.cleanx.lcx",
 )
-val devApplicationIdSuffix = readConfig(
+val devApplicationIdSuffix = readConfigAllowEmpty(
     propertyName = "LCX_DEV_APPLICATION_ID_SUFFIX",
     envName = "LCX_DEV_APPLICATION_ID_SUFFIX",
     defaultValue = ".dev",
@@ -509,6 +519,7 @@ dependencies {
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.compose.activity)
     debugImplementation(libs.compose.ui.tooling)
+    debugImplementation(libs.compose.ui.test.manifest)
 
     // Navigation
     implementation(libs.navigation.compose)
@@ -553,4 +564,8 @@ dependencies {
     testImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(libs.androidx.test.core)
+    androidTestImplementation(platform(libs.compose.bom))
+    androidTestImplementation(libs.compose.ui.test.junit4)
+    androidTestImplementation(libs.androidx.test.uiautomator)
 }

@@ -20,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
@@ -33,6 +34,7 @@ import com.cleanx.lcx.core.theme.LcxSuccess
 import com.cleanx.lcx.core.ui.ButtonVariant
 import com.cleanx.lcx.core.ui.LcxButton
 import com.cleanx.lcx.core.ui.LcxCard
+import com.cleanx.lcx.core.ui.LcxTestTags
 import com.cleanx.lcx.core.ui.LoadingOverlay
 
 @Composable
@@ -56,7 +58,11 @@ fun ChargeScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .testTag(LcxTestTags.CHARGE_ROOT),
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -102,6 +108,11 @@ fun ChargeScreen(
                 is ChargePhase.Failed -> FailedContent(
                     message = state.errorMessage,
                     onRetry = viewModel::retry,
+                    onBack = onNavigateBack,
+                )
+
+                is ChargePhase.RequiresReconciliation -> RequiresReconciliationContent(
+                    message = state.errorMessage,
                     onBack = onNavigateBack,
                 )
 
@@ -168,7 +179,9 @@ private fun IdleContent(
     LcxButton(
         text = "Cobrar",
         onClick = onCharge,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(LcxTestTags.CHARGE_START_BUTTON),
     )
 
     Spacer(Modifier.height(LcxSpacing.sm))
@@ -193,6 +206,7 @@ private fun SuccessContent(
         enter = fadeIn(),
     ) {
         Column(
+            modifier = Modifier.testTag(LcxTestTags.CHARGE_SUCCESS_ROOT),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
@@ -226,7 +240,9 @@ private fun SuccessContent(
             LcxButton(
                 text = "Imprimir etiqueta",
                 onClick = onContinue,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(LcxTestTags.CHARGE_PRINT_BUTTON),
             )
 
             Spacer(Modifier.height(LcxSpacing.sm))
@@ -312,6 +328,42 @@ private fun FailedContent(
     )
 
     Spacer(Modifier.height(LcxSpacing.sm))
+
+    LcxButton(
+        text = "Volver",
+        onClick = onBack,
+        modifier = Modifier.fillMaxWidth(),
+        variant = ButtonVariant.Secondary,
+    )
+}
+
+@Composable
+private fun RequiresReconciliationContent(
+    message: String?,
+    onBack: () -> Unit,
+) {
+    Text(
+        text = "Requiere conciliacion",
+        style = MaterialTheme.typography.headlineSmall,
+        color = MaterialTheme.colorScheme.error,
+        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+    )
+    Spacer(Modifier.height(LcxSpacing.sm))
+    Text(
+        text = mapErrorToUserMessage(message),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+    )
+    Spacer(Modifier.height(LcxSpacing.xs))
+    Text(
+        text = "No inicies otro cobro hasta verificar este intento en Zettle.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+    )
+
+    Spacer(Modifier.height(LcxSpacing.xl))
 
     LcxButton(
         text = "Volver",

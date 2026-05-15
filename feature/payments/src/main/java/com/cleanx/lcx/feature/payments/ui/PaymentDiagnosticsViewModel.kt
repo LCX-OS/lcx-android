@@ -71,12 +71,26 @@ class PaymentDiagnosticsViewModel @Inject constructor(
                     reference = "diag-test",
                 )
                 val display = when (result) {
-                    is PaymentResult.Success ->
+                    is PaymentResult.Success -> {
+                        Timber.tag("PAYMENT").i(
+                            "Zettle diagnostic charge success transactionId=%s amount=%s",
+                            result.transactionId,
+                            result.amount,
+                        )
                         "Exito: txn=${result.transactionId.take(8)}... monto=${result.amount}"
-                    is PaymentResult.Cancelled ->
+                    }
+                    is PaymentResult.Cancelled -> {
+                        Timber.tag("PAYMENT").w("Zettle diagnostic charge cancelled")
                         "Cancelado"
-                    is PaymentResult.Failed ->
+                    }
+                    is PaymentResult.Failed -> {
+                        Timber.tag("PAYMENT").e(
+                            "Zettle diagnostic charge failed code=%s message=%s",
+                            result.errorCode,
+                            result.message,
+                        )
                         "Error: ${result.errorCode} — ${result.message}"
+                    }
                 }
                 refreshCapability(lastResult = display)
             } catch (e: Exception) {
