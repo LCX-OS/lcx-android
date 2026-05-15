@@ -79,8 +79,8 @@ internal fun buildSections(
         MoreSection(
             title = "Incidencias",
             items = listOf(
-                MoreItem("Nueva Incidencia", Icons.Filled.ReportProblem, Screen.IncidentsNew),
-                MoreItem("Historial de Incidencias", Icons.Filled.History, Screen.IncidentsHistory),
+                MoreItem("Nueva Incidencia", Icons.Filled.ReportProblem, Screen.IncidentsNew, isAvailable = true),
+                MoreItem("Historial de Incidencias", Icons.Filled.History, Screen.IncidentsHistory, isAvailable = true),
             ),
         ),
     )
@@ -99,8 +99,8 @@ internal fun buildSections(
         MoreSection(
             title = "Ropa Dañada",
             items = listOf(
-                MoreItem("Nuevo Reporte", Icons.AutoMirrored.Filled.NoteAdd, Screen.DamagedClothingNew),
-                MoreItem("Historial", Icons.Filled.History, Screen.DamagedClothingHistory),
+                MoreItem("Nuevo Reporte", Icons.AutoMirrored.Filled.NoteAdd, Screen.DamagedClothingNew, isAvailable = true),
+                MoreItem("Historial", Icons.Filled.History, Screen.DamagedClothingHistory, isAvailable = true),
             ),
         ),
     )

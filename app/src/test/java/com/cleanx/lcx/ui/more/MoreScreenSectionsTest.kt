@@ -38,6 +38,10 @@ class MoreScreenSectionsTest {
         val items = buildSections(includePaymentDiagnostics = true).flatMap { it.items }
 
         assertTrue(items.first { it.screen == Screen.SalesGraph }.isAvailable)
+        assertTrue(items.first { it.screen == Screen.IncidentsNew }.isAvailable)
+        assertTrue(items.first { it.screen == Screen.IncidentsHistory }.isAvailable)
+        assertTrue(items.first { it.screen == Screen.DamagedClothingNew }.isAvailable)
+        assertTrue(items.first { it.screen == Screen.DamagedClothingHistory }.isAvailable)
         assertTrue(items.first { it.screen == Screen.PaymentDiagnostics }.isAvailable)
         assertFalse(items.first { it.screen == Screen.ShiftsControl }.isAvailable)
     }

@@ -404,6 +404,7 @@ class LoyaltyPlatformContractTest : ContractTestBase() {
         override val notificationsBaseUrl: String = platformBaseUrl
         override val supabaseUrl: String = "https://example.supabase.co"
         override val supabaseAnonKey: String = "anon"
+        override val supabaseEvidenceBucket: String = "evidence"
         override val deviceAuthBootstrapToken: String = "local-device-auth"
         override val zettleClientId: String = "client-id"
         override val zettleRedirectUrl: String = "com.cleanx.app://oauth/callback"

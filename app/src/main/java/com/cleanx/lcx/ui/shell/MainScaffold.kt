@@ -92,11 +92,7 @@ import com.cleanx.lcx.ui.more.MoreScreen
 import com.cleanx.lcx.ui.ops.BestPracticesShell
 import com.cleanx.lcx.ui.ops.CalendarEventsShell
 import com.cleanx.lcx.ui.ops.CalendarMonthlyShell
-import com.cleanx.lcx.ui.ops.DamagedClothingHistoryShell
-import com.cleanx.lcx.ui.ops.DamagedClothingNewShell
 import com.cleanx.lcx.ui.ops.HelpShell
-import com.cleanx.lcx.ui.ops.IncidentsHistoryShell
-import com.cleanx.lcx.ui.ops.IncidentsNewShell
 import com.cleanx.lcx.ui.ops.ShiftsControlShell
 import com.cleanx.lcx.ui.ops.ShiftsHistoryShell
 import com.cleanx.lcx.ui.ops.ShiftsReportsShell
@@ -105,6 +101,10 @@ import com.cleanx.lcx.ui.ops.SuppliesInventoryShell
 import com.cleanx.lcx.ui.ops.SuppliesLabelsShell
 import com.cleanx.lcx.ui.ops.SuppliesReportsShell
 import com.cleanx.lcx.ui.ops.VacationsShell
+import com.cleanx.lcx.ui.ops.problems.DamagedClothingHistoryScreen
+import com.cleanx.lcx.ui.ops.problems.DamagedClothingNewScreen
+import com.cleanx.lcx.ui.ops.problems.IncidentsHistoryScreen
+import com.cleanx.lcx.ui.ops.problems.IncidentsNewScreen
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -651,10 +651,10 @@ fun MainScaffold(
                     }
 
                     composable<Screen.IncidentsNew> {
-                        IncidentsNewShell(onBack = { tabNavController.popBackStack() })
+                        IncidentsNewScreen(onBack = { tabNavController.popBackStack() })
                     }
                     composable<Screen.IncidentsHistory> {
-                        IncidentsHistoryShell(onBack = { tabNavController.popBackStack() })
+                        IncidentsHistoryScreen(onBack = { tabNavController.popBackStack() })
                     }
                     composable<Screen.ShiftsControl> {
                         ShiftsControlShell(onBack = { tabNavController.popBackStack() })
@@ -669,10 +669,10 @@ fun MainScaffold(
                         ShiftsReportsShell(onBack = { tabNavController.popBackStack() })
                     }
                     composable<Screen.DamagedClothingNew> {
-                        DamagedClothingNewShell(onBack = { tabNavController.popBackStack() })
+                        DamagedClothingNewScreen(onBack = { tabNavController.popBackStack() })
                     }
                     composable<Screen.DamagedClothingHistory> {
-                        DamagedClothingHistoryShell(onBack = { tabNavController.popBackStack() })
+                        DamagedClothingHistoryScreen(onBack = { tabNavController.popBackStack() })
                     }
                     composable<Screen.SuppliesInventory> {
                         SuppliesInventoryShell(onBack = { tabNavController.popBackStack() })

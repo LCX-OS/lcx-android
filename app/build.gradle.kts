@@ -202,6 +202,11 @@ val devSupabaseAnonKey = readConfig(
         defaultValue = "dev-anon-key",
     ),
 )
+val devSupabaseEvidenceBucket = readConfig(
+    propertyName = "LCX_DEV_SUPABASE_EVIDENCE_BUCKET",
+    envName = "LCX_DEV_SUPABASE_EVIDENCE_BUCKET",
+    defaultValue = "evidence",
+)
 val devUseRealBrother = readBooleanConfig(
     propertyName = "LCX_DEV_USE_REAL_BROTHER",
     envName = "LCX_DEV_USE_REAL_BROTHER",
@@ -246,6 +251,11 @@ val prodSupabaseAnonKey = readConfig(
     propertyName = "LCX_PROD_SUPABASE_ANON_KEY",
     envName = "LCX_PROD_SUPABASE_ANON_KEY",
     defaultValue = "",
+)
+val prodSupabaseEvidenceBucket = readConfig(
+    propertyName = "LCX_PROD_SUPABASE_EVIDENCE_BUCKET",
+    envName = "LCX_PROD_SUPABASE_EVIDENCE_BUCKET",
+    defaultValue = "evidence",
 )
 val sharedDeviceAuthBootstrapToken = readConfigAllowEmpty(
     propertyName = "LCX_DEVICE_AUTH_BOOTSTRAP_TOKEN",
@@ -387,6 +397,7 @@ android {
         buildConfigField("String", "NOTIFICATIONS_BASE_URL", "\"http://10.0.2.2:8080\"")
         buildConfigField("String", "SUPABASE_URL", "\"https://placeholder.supabase.co\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"placeholder-anon-key\"")
+        buildConfigField("String", "SUPABASE_EVIDENCE_BUCKET", "\"evidence\"")
         buildConfigField("String", "DEVICE_AUTH_BOOTSTRAP_TOKEN", "\"local-device-auth\"")
         buildConfigField("String", "ZETTLE_CLIENT_ID", zettleClientId.toBuildConfigString())
         buildConfigField("String", "ZETTLE_REDIRECT_URL", zettleRedirectUrl.toBuildConfigString())
@@ -412,6 +423,7 @@ android {
             buildConfigField("String", "NOTIFICATIONS_BASE_URL", devNotificationsBaseUrl.toBuildConfigString())
             buildConfigField("String", "SUPABASE_URL", devSupabaseUrl.toBuildConfigString())
             buildConfigField("String", "SUPABASE_ANON_KEY", devSupabaseAnonKey.toBuildConfigString())
+            buildConfigField("String", "SUPABASE_EVIDENCE_BUCKET", devSupabaseEvidenceBucket.toBuildConfigString())
             buildConfigField("String", "DEVICE_AUTH_BOOTSTRAP_TOKEN", devDeviceAuthBootstrapToken.toBuildConfigString())
             buildConfigField("Boolean", "USE_REAL_ZETTLE", devUseRealZettle.toString())
             buildConfigField("Boolean", "USE_REAL_BROTHER", devUseRealBrother.toString())
@@ -425,6 +437,7 @@ android {
             buildConfigField("String", "NOTIFICATIONS_BASE_URL", prodNotificationsBaseUrl.toBuildConfigString())
             buildConfigField("String", "SUPABASE_URL", prodSupabaseUrl.toBuildConfigString())
             buildConfigField("String", "SUPABASE_ANON_KEY", prodSupabaseAnonKey.toBuildConfigString())
+            buildConfigField("String", "SUPABASE_EVIDENCE_BUCKET", prodSupabaseEvidenceBucket.toBuildConfigString())
             buildConfigField("String", "DEVICE_AUTH_BOOTSTRAP_TOKEN", prodDeviceAuthBootstrapToken.toBuildConfigString())
             buildConfigField("Boolean", "USE_REAL_ZETTLE", prodUseRealZettle.toString())
             buildConfigField("Boolean", "USE_REAL_BROTHER", prodUseRealBrother.toString())

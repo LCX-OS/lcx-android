@@ -228,7 +228,7 @@
       "public": false,
       "route_present": true,
       "parity_done": false,
-      "notes": "shell"
+      "notes": "native implementation replaces shell with incident form, camera photo capture, audio evidence, Supabase incident insert, evidence bucket upload, audit log, and history filters; parity remains false until physical camera/mic plus Storage upload are smoked against target Supabase"
     },
     {
       "id": "op-incidentes-historial",
@@ -239,7 +239,7 @@
       "public": false,
       "route_present": true,
       "parity_done": false,
-      "notes": "shell"
+      "notes": "native implementation replaces shell with live Supabase history, branch-scoped query, evidence counts, and status/type/search filtering; parity remains false until backend/device smoke evidence is captured"
     },
     {
       "id": "op-turnos-control",
@@ -294,7 +294,7 @@
       "public": false,
       "route_present": true,
       "parity_done": false,
-      "notes": "shell"
+      "notes": "native implementation replaces shell with ticket-linked damaged clothing report form, camera photo capture, audio evidence plus manual transcript, Supabase ticket resolution, damaged_clothing insert, evidence bucket upload, and audit log; parity remains false until physical camera/mic plus Storage upload are smoked against target Supabase"
     },
     {
       "id": "op-ropa-danada-historial",
@@ -305,7 +305,7 @@
       "public": false,
       "route_present": true,
       "parity_done": false,
-      "notes": "shell"
+      "notes": "native implementation replaces shell with live Supabase history, branch-scoped query, ticket/customer summaries, evidence counts, and search; parity remains false until backend/device smoke evidence is captured"
     },
     {
       "id": "op-suministros-inventario",

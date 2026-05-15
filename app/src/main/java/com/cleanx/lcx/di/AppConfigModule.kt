@@ -22,6 +22,7 @@ object AppConfigModule {
         override val notificationsBaseUrl: String = BuildConfig.NOTIFICATIONS_BASE_URL
         override val supabaseUrl: String = BuildConfig.SUPABASE_URL
         override val supabaseAnonKey: String = BuildConfig.SUPABASE_ANON_KEY
+        override val supabaseEvidenceBucket: String = BuildConfig.SUPABASE_EVIDENCE_BUCKET
         override val deviceAuthBootstrapToken: String = BuildConfig.DEVICE_AUTH_BOOTSTRAP_TOKEN
         override val zettleClientId: String = BuildConfig.ZETTLE_CLIENT_ID
         override val zettleRedirectUrl: String = BuildConfig.ZETTLE_REDIRECT_URL

@@ -13,6 +13,7 @@ interface BuildConfigProvider {
     val notificationsBaseUrl: String
     val supabaseUrl: String
     val supabaseAnonKey: String
+    val supabaseEvidenceBucket: String
     val deviceAuthBootstrapToken: String
     val zettleClientId: String
     val zettleRedirectUrl: String
