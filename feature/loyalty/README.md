@@ -6,6 +6,8 @@ Este modulo concentra contratos de red, DTOs y `LoyaltyRepository`. No define na
 
 Estado 2026-05-13: loyalty usa el contrato canonico de `lcx-platform` en `/v1/loyalty/*` mediante el Retrofit calificado con `PLATFORM_BASE_URL`. La PWA conserva rutas `/api/loyalty/*` solo como compatibilidad legacy y no es dependencia de Android para esta superficie.
 
+Nota 2026-05-19: `createAccount` acepta `displayName` sin `customerId`/`loyaltyId`; `lcx-platform` genera el ID `CLNX-*` para alta operativa desde mostrador.
+
 ## Public surface
 
 - `LoyaltyRepository`

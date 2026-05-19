@@ -77,12 +77,33 @@ class LoyaltyRepositoryTest {
     }
 
     @Test
-    fun `createAccount rejects missing platform identifier`() = runTest {
+    fun `createAccount allows display name only for generated platform loyalty id`() = runTest {
+        val requestSlot = slot<CreateLoyaltyAccountRequest>()
+        coEvery { api.createAccount(capture(requestSlot)) } returns Response.success(
+            LoyaltyCreateAccountResponse(
+                data = sampleAccount.copy(
+                    customerId = null,
+                    displayName = "Juan Perez",
+                    loyaltyId = "CLNX-1234ABCD",
+                ),
+            ),
+        )
+
         val result = repository.createAccount(displayName = "Juan Perez")
+
+        assertTrue(result is LoyaltyApiResult.Success)
+        assertEquals("Juan Perez", requestSlot.captured.displayName)
+        assertEquals(null, requestSlot.captured.customerId)
+        assertEquals(null, requestSlot.captured.loyaltyId)
+    }
+
+    @Test
+    fun `createAccount rejects empty account anchor`() = runTest {
+        val result = repository.createAccount()
 
         assertTrue(result is LoyaltyApiResult.Error)
         val error = result as LoyaltyApiResult.Error
-        assertEquals("LOYALTY_ACCOUNT_IDENTIFIER_REQUIRED", error.code)
+        assertEquals("LOYALTY_ACCOUNT_ANCHOR_REQUIRED", error.code)
         coVerify(exactly = 0) { api.createAccount(any()) }
     }
 

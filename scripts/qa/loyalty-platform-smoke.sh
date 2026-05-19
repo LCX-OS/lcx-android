@@ -18,6 +18,7 @@ Optional:
   LCX_PLATFORM_ENV_FILE=<path>                 # defaults to ../lcx-platform/deploy/gcp-k3s/prod.env
   LCX_PWA_ENV_FILE=<path>                      # defaults to ../lcx-pwa/.env.local
   LCX_LOYALTY_SMOKE_ACCOUNT_ID=<uuid>          # also checks account detail and wallet issue
+  LCX_LOYALTY_SMOKE_AUTO_ACCOUNT=true|false    # defaults true; uses first listed account when account id is empty
   LCX_LOYALTY_SMOKE_WALLET_LINKS=true          # opens issued Apple/Google wallet links, if jq is installed
   LCX_LOYALTY_SMOKE_MUTATE=true                # also queues wallet resync for the account
   LCX_LOYALTY_SMOKE_PROVIDER=google|apple      # provider for optional resync
@@ -232,6 +233,31 @@ request "loyalty rewards" "GET" "/v1/loyalty/rewards" "$tmp_dir/rewards.json"
 request "loyalty account list" "GET" "/v1/loyalty/accounts?limit=1" "$tmp_dir/accounts.json"
 
 account_id="${LCX_LOYALTY_SMOKE_ACCOUNT_ID:-}"
+if [[ -z "$account_id" && "${LCX_LOYALTY_SMOKE_AUTO_ACCOUNT:-true}" == "true" ]]; then
+  if command -v node >/dev/null 2>&1; then
+    account_id="$(
+      node -e '
+        let input = "";
+        process.stdin.on("data", (chunk) => { input += chunk; });
+        process.stdin.on("end", () => {
+          try {
+            const parsed = JSON.parse(input);
+            const id = parsed?.data?.accounts?.[0]?.id;
+            if (typeof id === "string") {
+              process.stdout.write(id);
+            }
+          } catch {}
+        });
+      ' < "$tmp_dir/accounts.json"
+    )"
+    if [[ -n "$account_id" ]]; then
+      echo "INFO derived LCX_LOYALTY_SMOKE_ACCOUNT_ID from first account result"
+    fi
+  else
+    echo "WARN account auto-selection skipped because node is not installed"
+  fi
+fi
+
 if [[ -n "$account_id" ]]; then
   request "loyalty account detail" "GET" "/v1/loyalty/accounts/${account_id}" "$tmp_dir/account-detail.json"
   request \

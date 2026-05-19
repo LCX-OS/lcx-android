@@ -61,10 +61,14 @@ class LoyaltyRepository @Inject constructor(
         loyaltyId: String? = null,
     ): LoyaltyApiResult<LoyaltyCreateAccountData> {
         Timber.tag("LOYALTY").d("Creating loyalty account for displayName=%s", displayName)
-        if (customerId.isNullOrBlank() && loyaltyId.isNullOrBlank()) {
+        if (
+            displayName.isNullOrBlank() &&
+            customerId.isNullOrBlank() &&
+            loyaltyId.isNullOrBlank()
+        ) {
             return LoyaltyApiResult.Error(
-                code = "LOYALTY_ACCOUNT_IDENTIFIER_REQUIRED",
-                message = "Debes enviar customer_id o loyalty_id.",
+                code = "LOYALTY_ACCOUNT_ANCHOR_REQUIRED",
+                message = "Debes enviar nombre, customer_id o loyalty_id.",
                 httpStatus = 0,
             )
         }
